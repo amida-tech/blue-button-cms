@@ -12,7 +12,7 @@ module.exports = function (grunt) {
     // Project configuration.
     grunt.initConfig({
         jshint: {
-            files: ['*.js', './lib/*.js'],
+            files: ['*.js', './lib/*.js', './test/**/*.js'],
             options: {
                 browser: true,
                 smarttabs: true,
