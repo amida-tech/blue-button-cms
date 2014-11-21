@@ -8,9 +8,13 @@ module.exports = function (grunt) {
     grunt.loadNpmTasks('grunt-istanbul-coverage');
     grunt.loadNpmTasks('grunt-coveralls');
     grunt.loadNpmTasks('grunt-jsbeautifier');
+    grunt.loadNpmTasks('grunt-browserify');
+    grunt.loadNpmTasks('grunt-mocha-phantomjs');
+    grunt.loadNpmTasks('grunt-contrib-connect');
 
     // Project configuration.
     grunt.initConfig({
+        pkg: grunt.file.readJSON('package.json'),
         jshint: {
             files: ['*.js', './lib/**/*.js', './test/**/*.js'],
             options: {
@@ -95,11 +99,53 @@ module.exports = function (grunt) {
                 dir: 'coverage/',
                 root: '.'
             }
+        },
+        browserify: {
+            standalone: {
+                src: ['<%=pkg.main%>'],
+                dest: 'dist/<%=pkg.name%>.standalone.js',
+                options: {
+                    standalone: '<%=pkg.name%>'
+                }
+            },
+            require: {
+                src: ['<%=pkg.main%>'],
+                dest: 'dist/<%=pkg.name%>.js',
+                options: {
+                    alias: ["<%=pkg.main%>:<%=pkg.name%>"]
+                }
+            },
+            tests: {
+                src: ['test/**/*.js'],
+                dest: 'dist/mocha_tests.js',
+                options: {
+                    transform: ['brfs']
+                }
+            }
+        },
+        connect: {
+            server: {
+                options: {
+                    port: 8000,
+                    hostname: '127.0.0.1'
+                }
+            }
+        },
+        'mocha_phantomjs': {
+            all: {
+                options: {
+                    urls: [
+                        'http://127.0.0.1:8000/dist/mocha_runner.html'
+                    ]
+                }
+            }
         }
     });
 
+    grunt.registerTask('browser-test', ['browserify:require', 'browserify:tests', 'connect', 'mocha_phantomjs']);
+
     // Default task.
-    grunt.registerTask('default', ['beautify', 'jshint', 'mochaTest']);
+    grunt.registerTask('default', ['beautify', 'jshint', 'mochaTest', 'browser-test']);
     //Express omitted for travis build.
     grunt.registerTask('commit', ['jshint', 'mochaTest']);
     grunt.registerTask('mocha', ['mochaTest']);
