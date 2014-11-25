@@ -1,5 +1,26 @@
 /*global module*/
 
+var bbcms = require('./index');
+var path = require('path');
+
+var generateChangeDetectionFiles = function (grunt) {
+    var srcs = [
+        'test/fixtures/sample.txt',
+    ];
+    var dest = 'test/fixtures/generated';
+
+    srcs.forEach(function (src) {
+        var content = grunt.file.read(src);
+        var result = bbcms.parseText(content);
+
+        var baseName = path.basename(src, path.extname(src));
+        var destName = baseName + '.json';
+        var destPath = path.join(dest, destName);
+        var destContent = JSON.stringify(result, undefined, 2);
+        grunt.file.write(destPath, destContent);
+    });
+};
+
 module.exports = function (grunt) {
 
     grunt.loadNpmTasks('grunt-contrib-jshint');
@@ -142,18 +163,17 @@ module.exports = function (grunt) {
         }
     });
 
-    grunt.registerTask('browser-test', ['browserify:require', 'browserify:tests', 'connect', 'mocha_phantomjs']);
-
-    // Default task.
-    grunt.registerTask('default', ['beautify', 'jshint', 'mochaTest', 'browser-test']);
-    //Express omitted for travis build.
-    grunt.registerTask('commit', ['jshint', 'mochaTest']);
+    grunt.registerTask('beautify', ['jsbeautifier:beautify']);
     grunt.registerTask('mocha', ['mochaTest']);
+    grunt.registerTask('browser-test', ['browserify:require', 'browserify:tests', 'connect', 'mocha_phantomjs']);
+    grunt.registerTask('gen-change-detect', 'generates files to detect changes in generation', function () {
+        generateChangeDetectionFiles(grunt);
+    });
+
+    grunt.registerTask('default', ['beautify', 'jshint', 'mocha', 'browser-test', 'gen-change-detect']);
+
+    grunt.registerTask('commit', ['jshint', 'mocha']);
     grunt.registerTask('timestamp', function () {
         grunt.log.subhead(Date());
     });
-
-    //JS beautifier
-    grunt.registerTask('beautify', ['jsbeautifier:beautify']);
-
 };
