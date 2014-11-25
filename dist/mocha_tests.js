@@ -664,11 +664,14 @@ module.exports = {
 };
 
 },{"./cmsObjConverter":2,"./cmsTxtToIntObj":3}],5:[function(require,module,exports){
+ "use strict";
+
  var commonFunctions = require('./sections/commonFunctions');
+
+ var processDate = commonFunctions.getFunction('cda_date');
 
  function getMeta(intObj) {
      intObj = intObj[0];
-     var processDate = commonFunctions.getFunction('cda_date');
      var dateString = intObj.timestamp;
      var dateObj = processDate(dateString);
      intObj.timestamp = dateObj;
@@ -157413,31 +157416,16 @@ function determineDatePrecision(dateString) {
 }
 
 function cda_date(dateString, precision) {
-    var dateObj;
-    var date;
-    var dateNum;
-    if (arguments.length === 2) {
-        dateObj = {};
-        date = new Date(dateString);
-        dateNum = date.getTime() - date.getTimezoneOffset() * 60000;
-        date.setTime(dateNum);
-        //TODO: don't need milliseconds precision here
-        dateObj.date = date.toISOString();
-        dateObj.precision = precision;
-        return dateObj;
-    } else {
-        dateObj = {};
-        date = new Date(dateString);
-        dateNum = date.getTime() - date.getTimezoneOffset() * 60000;
-        date.setTime(dateNum);
-        dateObj.date = date.toISOString();
-        if (dateObj.date.substring(dateObj.date.length - 5)) {
-            dateObj.date = dateObj.date.substring(dateObj.date, dateObj.date.length - 5) + "Z";
-        }
-        dateObj.precision = determineDatePrecision(dateString);
-        return dateObj;
+    var dateObj = {};
+    var date = new Date(dateString);
+    var dateNum = date.getTime() - date.getTimezoneOffset() * 60000;
+    date.setTime(dateNum);
+    dateObj.date = date.toISOString();
+    if (dateObj.date.substring(dateObj.date.length - 5)) {
+        dateObj.date = dateObj.date.substring(dateObj.date, dateObj.date.length - 5) + "Z";
     }
-
+    dateObj.precision = determineDatePrecision(dateString);
+    return dateObj;
 }
 
 /* Not in use at the moment, may be useful later.
@@ -157787,8 +157775,11 @@ module.exports = parseImmunizations;
 },{"./commonFunctions":10,"underscore":86}],13:[function(require,module,exports){
 "use strict";
 
-var commonFunctions = require('./commonFunctions');
 var _ = require('underscore');
+
+var commonFunctions = require('./commonFunctions');
+
+var processDate = commonFunctions.getFunction('cda_date');
 
 //this is for medicare plans
 function processMedicarePlanChild(childObj) {
@@ -157840,7 +157831,6 @@ function processMedicarePlanChild(childObj) {
             tmpInsurerData["name"].push(value);
 
         } else if (key.indexOf('plan period') >= 0) {
-            var processDate = commonFunctions.getFunction('cda_date');
             var valueArray = value.split('-');
             dateArray["low"] = processDate(valueArray[0].trim());
             if (valueArray[1].indexOf('current') < 0) {
@@ -157922,7 +157912,6 @@ function processEmployerChild(childObj) {
         var typeArray = [];
         var dateArray = {};
         var tmpInsurerData = {};
-        var processDate;
 
         typeArray.push('employer subsidy');
         for (var key in childObj) {
@@ -157940,10 +157929,8 @@ function processEmployerChild(childObj) {
                 tmpInsurerData.name.push(value);
 
             } else if (key.indexOf('start date') >= 0) {
-                processDate = commonFunctions.getFunction('cda_date');
                 dateArray["low"] = processDate(value);
             } else if (key.indexOf('end date') >= 0) {
-                processDate = commonFunctions.getFunction('cda_date');
                 dateArray["high"] = processDate(value);
             }
         }
@@ -157984,7 +157971,6 @@ function processInsuranceChild(childObj) {
 
     for (var key in childObj) {
         key = key.toLowerCase();
-        var processDate;
         var value = childObj[key];
         var ignoreValue = commonFunctions.getFunction('ignore');
         if (ignoreValue(value)) {
@@ -158032,10 +158018,8 @@ function processInsuranceChild(childObj) {
             }
             tmpInsurerData.address.push(processAddress(value));
         } else if (key.indexOf('effective date') >= 0) {
-            processDate = commonFunctions.getFunction('cda_date');
             dateArray["low"] = processDate(value);
         } else if (key.indexOf('termination date') >= 0) {
-            processDate = commonFunctions.getFunction('cda_date');
             dateArray["high"] = processDate(value);
         }
         //not present in sample text file, but files probably have it.
@@ -158336,23 +158320,22 @@ module.exports = parseMedications;
 
 var commonFunctions = require('./commonFunctions');
 
+var processDate = commonFunctions.getFunction('cda_date');
+
 function processPlanOfCareChild(rawChildObj) {
     var childObj = {};
     var dateArray = {};
     for (var key in rawChildObj) {
         var value = rawChildObj[key];
         var ignoreValue = commonFunctions.getFunction('ignore');
-        var processDate;
         if (ignoreValue(value)) {
             continue;
         } else if (key.indexOf('description') >= 0) {
             var processFunction = commonFunctions.getFunction('cda_coded_entry');
             childObj.plan = processFunction(value);
         } else if (key.indexOf('next eligible date') >= 0) {
-            processDate = commonFunctions.getFunction('cda_date');
             dateArray["low"] = processDate(value);
         } else if (key.indexOf('last date of service') >= 0) {
-            processDate = commonFunctions.getFunction('cda_date');
             dateArray["high"] = processDate(value);
         }
     }
@@ -158384,13 +158367,14 @@ module.exports = parsePlanOfCare;
 
 var commonFunctions = require('./commonFunctions');
 
+var processDate = commonFunctions.getFunction('cda_date');
+
 function processProblemChild(rawChildObj) {
     var childObj = {};
     var dateArray = {};
     for (var key in rawChildObj) {
         var value = rawChildObj[key];
         var ignoreValue = commonFunctions.getFunction('ignore');
-        var processDate;
         if (ignoreValue(value)) {
             continue;
         } else if (key.indexOf('name') >= 0) {
@@ -158398,10 +158382,8 @@ function processProblemChild(rawChildObj) {
             var pr = childObj.problem = {};
             pr.code = processFunction(value);
         } else if (key.indexOf('start date') >= 0) {
-            processDate = commonFunctions.getFunction('cda_date');
             dateArray["low"] = processDate(value);
         } else if (key.indexOf('end date') >= 0) {
-            processDate = commonFunctions.getFunction('cda_date');
             dateArray["high"] = processDate(value);
         }
     }
@@ -158515,6 +158497,8 @@ module.exports = parseProviders;
 
 var commonFunctions = require('./commonFunctions');
 
+var parseDate = commonFunctions.getFunction('cda_date');
+
 function findGlucoseMeasurementName(comment) {
 
     //you should load up the keys and values locally, for now we hardcode for example
@@ -158534,7 +158518,6 @@ function processGlucoseLevels(childObj) {
     var glucoseLevels = childObj.results.split(',');
     var glucoseTypes = childObj.comments.split(',');
     var dateVal = childObj['date taken'];
-    var parseDate = commonFunctions.getFunction('cda_date');
     var dateObj = parseDate(dateVal);
     var units = 'mg/dL'; //these are the default units
     for (var x in glucoseLevels) {
@@ -158566,7 +158549,6 @@ function processCBC(childObj) {
     var measurements = childObj.results.split(',');
     var comments = childObj.comments.split(',');
     var dateVal = childObj['date taken'];
-    var parseDate = commonFunctions.getFunction('cda_date');
     var parseCodedEntry = commonFunctions.getFunction('cda_coded_entry');
     var dateObj = parseDate(dateVal);
     var unit;
@@ -158650,12 +158632,11 @@ module.exports = parseResults;
 
 var commonFunctions = require('./commonFunctions');
 
-/*vitals does not need the common parser because it doesn't have a lot of common
-elements */
+var parseDate = commonFunctions.getFunction('cda_date');
+var parseCodedEntry = commonFunctions.getFunction('cda_coded_entry');
 
 //this needs to be a more complex function that can correctly analyze what
 //type of units it is. Also should be given the value as well later.
-
 function getVitalUnits(vitalType) {
     /*for height and weight, you need some kind of realistic numberical evaluator to
     determine the weight and height units */
@@ -158718,9 +158699,6 @@ function expandCodeEntry(childObj, command) {
 
 function parseVitalsChild(childObj) {
     var vitalChildObj = {};
-    var parseDate = commonFunctions.getFunction('cda_date');
-    var parseCodedEntry = commonFunctions.getFunction(
-        'cda_coded_entry');
     var vitalType = childObj['vital statistic type'];
 
     vitalChildObj.vital = parseCodedEntry(vitalType); //need to change here
