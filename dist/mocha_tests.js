@@ -161,7 +161,7 @@ module.exports.convertToBBModel = convertToBBModel;
   not only the ends */
 
 function removeUnwantedCharacters(cleanedString, unwantedCharArray) {
-    for (var x in unwantedCharArray) {
+    for (var x = 0; x < unwantedCharArray.length; x++) {
         var unwantedCharRegExp = new RegExp(unwantedCharArray[x], 'g');
         cleanedString = cleanedString.replace(unwantedCharRegExp, '');
     }
@@ -294,10 +294,10 @@ function processMetaChild(objectString) {
         var metaValueCode = /(\n{2,}?)([\S\s]+?)(?=\n{2,}?)/gi;
         var metaValues = objectString.match(metaValueCode);
         var counter = 0;
-        for (var value in metaValues) {
+        for (var value = 0; value < metaValues.length; value++) {
             var cleanedMetaValue = metaValues[value].replace(/\n/g, '');
             if (cleanedMetaValue.length !== 0) {
-                obj[value.toLowerCase()] = cleanedMetaValue;
+                obj[value.toString()] = cleanedMetaValue;
             }
             counter++;
         }
@@ -318,7 +318,7 @@ function processSectionChild(objectString) {
     /*this is to deal with multiple same keys from
   one child of a section*/
     //unusual steps are required to parse meta data and claims summary
-    for (var s in keyValuePairArray) {
+    for (var s = 0; s < keyValuePairArray.length; s++) {
         //clean up the key pair
         var keyValuePairString = trimStringEnds(keyValuePairArray[s], ['\n']);
         //split each string by the :, the result is an array of size two
@@ -353,7 +353,7 @@ function processClaimsLineChild(objectString) {
     var keyValuePairArray = objectString.match(keyValuePairRegExp);
 
     //unusual steps are required to parse meta data and claims summary
-    for (var s in keyValuePairArray) {
+    for (var s = 0; s < keyValuePairArray.length; s++) {
         //clean up the key value pair
         var keyValuePairString = trimStringEnds(keyValuePairArray[s], ['\n']);
         //split each string by the :, the result is an array of size two
@@ -392,7 +392,7 @@ function processClaimsSectionChild(objectString) {
     var keyValuePairArray = objectString.match(keyValuePairRegExp);
     //unusual steps are required to parse meta data and claims summary
 
-    for (var s in keyValuePairArray) {
+    for (var s = 0; s < keyValuePairArray.length; s++) {
         //clean up the key pair
         var keyValuePairString = trimStringEnds(keyValuePairArray[s], ['\n']);
 
@@ -431,7 +431,7 @@ function getSectionBody(sectionString) {
     //or go to the end of the string.
     var objectStrings = sectionString.match(objectFromBodyRegExp);
     //process each section object (from string to an actual object)
-    for (var obj in objectStrings) {
+    for (var obj = 0; obj < objectStrings.length; obj++) {
         var sectionChild = processSectionChild(objectStrings[obj]);
 
         if (!isEmpty(sectionChild)) {
@@ -491,7 +491,7 @@ function getClaimsBody(sectionString) {
     var claimNumber;
 
     //process each claim
-    for (obj in claimStrings) {
+    for (obj = 0; obj < claimStrings.length; obj++) {
         var child = processClaimsSectionChild(claimStrings[obj]);
         if (!isEmpty(child)) {
             if ('source' in child) { //take into account the source tag
@@ -504,7 +504,7 @@ function getClaimsBody(sectionString) {
     }
 
     //process each batch of claim lines
-    for (obj in claimLineStrings) {
+    for (obj = 0; obj < claimLineStrings.length; obj++) {
         var sectionChild = processClaimsLineChild(claimLineStrings[obj]);
         if (!isEmpty(sectionChild)) {
             if ('source' in sectionChild) {
@@ -555,7 +555,7 @@ function getMetaBody(sectionString) {
     var sectionBodyObj = {};
     var metaBodyCode = /-{2,}((\n*?\*{3,}[\S\s]+\*{3,})|(\n{2,}))[\S\s]+?\n{3,}/gi;
     var objectStrings = sectionString.match(metaBodyCode);
-    for (var obj in objectStrings) {
+    for (var obj = 0; obj < objectStrings.length; obj++) {
         var sectionChild = processMetaChild(objectStrings[obj]);
         if (!isEmpty(sectionChild)) {
             sectionBodyObj.type = 'cms';
@@ -608,7 +608,7 @@ function getIntObj(cmsString) {
     //code be converted to utf8 later
     var documentObj = {};
     var sectionArray = separateSections(rawData);
-    for (var section in sectionArray) {
+    for (var section = 0; section < sectionArray.length; section++) {
         var sectionObj = convertToObject(sectionArray[section]);
         var sectionObjTitle = sectionObj.sectionTitle;
         var sectionObjBody = sectionObj.sectionBody;
@@ -159119,6 +159119,22 @@ module.exports = [{
             "city"
         ]
     }, {
+        "id": "cda_date_element",
+        "type": "object",
+        "properties": {
+            "date": {
+                "type": "string",
+                "format": "date-time"
+            },
+            "precision": {
+                "type": "string"
+            }
+        },
+        "additionalProperties": false,
+        "required": [
+            "date"
+        ]
+    }, {
         "id": "cda_date",
         "type": "object",
         "properties": {
@@ -159137,22 +159153,6 @@ module.exports = [{
         },
         "additionalProperties": false,
         "minProperties": 1
-    }, {
-    	"id": "cda_date_element",
-        "type": "object",
-        "properties": {
-            "date": {
-                "type": "string",
-                "format": "date-time"
-            },
-            "precision": {
-                "type": "string"
-            }
-        },
-        "additionalProperties": false,
-        "required": [
-            "date"
-        ]
     }, {
     	"id": "cda_phone",
         "type": "object",
@@ -160730,7 +160730,8 @@ module.exports = {
     SCHEMA_TYPE_EXPECTED:                   "Schema is expected to be of type 'object'",
     SCHEMA_NOT_AN_OBJECT:                   "Schema is not an object: {0}",
     ASYNC_TIMEOUT:                          "{0} asynchronous task(s) have timed out after {1} ms",
-    PARENT_SCHEMA_VALIDATION_FAILED:        "Schema failed to validate against its parent schema, see inner errors for details."
+    PARENT_SCHEMA_VALIDATION_FAILED:        "Schema failed to validate against its parent schema, see inner errors for details.",
+    REMOTE_NOT_VALID:                       "Remote reference didn't compile successfully: {0}"
 
 };
 
@@ -161582,6 +161583,7 @@ module.exports = Report;
 },{"./Errors":41,"_process":85}],46:[function(require,module,exports){
 "use strict";
 
+var Report              = require("./Report");
 var SchemaCompilation   = require("./SchemaCompilation");
 var SchemaValidation    = require("./SchemaValidation");
 
@@ -161672,11 +161674,23 @@ exports.getSchemaByUri = function (report, uri, root) {
         var compileRemote = result !== root;
         // now we need to compile and validate resolved schema (in case it's not already)
         if (compileRemote) {
+
             report.path.push(remotePath);
-            var ok = SchemaCompilation.compileSchema.call(this, report, result);
-            if (ok) { ok = SchemaValidation.validateSchema.call(this, report, result); }
+
+            var remoteReport = new Report(report);
+            if (SchemaCompilation.compileSchema.call(this, remoteReport, result)) {
+                SchemaValidation.validateSchema.call(this, remoteReport, result);
+            }
+            var remoteReportIsValid = remoteReport.isValid();
+            if (!remoteReportIsValid) {
+                report.addError("REMOTE_NOT_VALID", [uri], remoteReport);
+            }
+
             report.path.pop();
-            if (!ok) { return undefined; }
+
+            if (!remoteReportIsValid) {
+                return undefined;
+            }
         }
     }
 
@@ -161697,7 +161711,7 @@ exports.getSchemaByUri = function (report, uri, root) {
 
 exports.getRemotePath = getRemotePath;
 
-},{"./SchemaCompilation":47,"./SchemaValidation":48}],47:[function(require,module,exports){
+},{"./Report":45,"./SchemaCompilation":47,"./SchemaValidation":48}],47:[function(require,module,exports){
 "use strict";
 
 var Report = require("./Report");
@@ -161890,7 +161904,6 @@ exports.compileSchema = function (report, schema) {
                 Array.prototype.push.apply(report.path, refObj.path);
                 report.addError("UNRESOLVABLE_REFERENCE", [refObj.ref]);
                 report.path.slice(0, -refObj.path.length);
-                return false;
             }
         }
         // this might create circular references
