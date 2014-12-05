@@ -8,6 +8,8 @@ Blue Button CMS Parser
 [![Build Status](https://travis-ci.org/amida-tech/blue-button-cms.svg)](https://travis-ci.org/amida-tech/blue-button-cms)
 [![Coverage Status](https://coveralls.io/repos/amida-tech/blue-button-cms/badge.png)](https://coveralls.io/r/amida-tech/blue-button-cms)
 
+This library is part of [blue-button](https://github.com/amida-tech/blue-button) family of parsers and generate JSON data from CMS files.  The model of the generated data is described in [blue-button-model](https://github.com/amida-tech/blue-button-model).  This library is also exposed through [blue-button](https://github.com/amida-tech/blue-button). 
+
 ## Usage
 
 ``` javascript
