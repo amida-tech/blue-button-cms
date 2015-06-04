@@ -219,14 +219,12 @@ function isEmpty(obj) {
 //main function that will be used to getIntObj
 
 function clean(cmsString) {
-
     if (cmsString.indexOf('\r\n') >= 0) {
         cmsString = cmsString.replace(/\r\n/g, '\n');
         cmsString = cmsString.replace(/\r/g, '\n');
-        //cmsString=cmsString.replace(/\n\n/g, '\n');
-        return cmsString;
+        //cmsString=cmsString.replace(/\n\n/g, '\n')
     }
-
+    cmsString = cmsString.replace(/(\n\n\n\n\n)+/g, '\n\n\n\n');
     return cmsString;
 }
 
@@ -239,27 +237,28 @@ function separateSections(data) {
     //specical metaMatchCode goes first.
 
     // 1st regular expression for meta, need to do
-    var metaMatchCode = '^(-).[\\S\\s]+?(\\n){2,}';
+    var metaMatchCode = '^(-).[\\S\\s]+?(\\n){2,}'; //this isn't used anywhere...
 
     /* 2nd regular expression for claims, because the structure of claims is
   unique */
-    var claimsHeaderMatchCode = '(-){4,}(\\n)*Claim Summary(\\n){2,}(-){4,}';
+    var claimsHeaderMatchCode = '(-){4,}(\\n)*Claim Summary(\\n){2,}(-){4,}'; //  /(-){4,}(\\n)*Claim Summary(\\n){2,}(-){4,}([\\S\\s]+Claim[\\S\\s]+)+(?=((-){4,}))/gi
     var claimsBodyMatchCode = '([\\S\\s]+Claim[\\S\\s]+)+';
     var claimsEndMatchCode = '(?=((-){4,}))';
     var claimsMatchCode = claimsHeaderMatchCode +
         claimsBodyMatchCode + claimsEndMatchCode;
 
     //this match code is for all other sections
-    var headerMatchCode = '(-){4,}[\\S\\s]+?(\\n){2,}(-){4,}';
+    var headerMatchCode = '(-){4,}[\\S\\s]+?(\\n){2,}(-){4,}'; // /(-){4,}[\\S\\s]+?(\\n){2,}(-){4,}[\\S\\s]+?(?=((-){4,}))/ig
     var bodyMatchCode = '[\\S\\s]+?';
     var endMatchCode = '(?=((-){4,}))';
     var sectionMatchCode = headerMatchCode + bodyMatchCode + endMatchCode;
 
     /* The regular expression for everything, search globally and
   ignore capitalization */
-    var totalMatchCode = claimsMatchCode + "|" + sectionMatchCode;
+    var totalMatchCode = claimsMatchCode + "|" + sectionMatchCode; // /(-){4,}(\\n)*Claim Summary(\\n){2,}(-){4,}([\\S\\s]+Claim[\\S\\s]+)+(?=((-){4,}))|(-){4,}[\\S\\s]+?(\\n){2,}(-){4,}[\\S\\s]+?(?=((-){4,}))/ig
     var totalRegExp = new RegExp(totalMatchCode, 'gi');
     var matchArray = data.match(totalRegExp);
+    console.log("matchArray: ", matchArray);
     return matchArray;
 }
 

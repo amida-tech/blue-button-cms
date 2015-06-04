@@ -24,7 +24,8 @@ var documentKeyMapper = {
     "other insurance": "payers",
     "preventive services": "plan_of_care",
     "claim summary": "claims",
-    "providers": "providers"
+    "providers": "providers",
+    "organizations": "organizations"
 };
 var bbDocumentModel = {
     "data": {
@@ -41,7 +42,8 @@ var bbDocumentModel = {
         "payers": [],
         "claims": [],
         "plan_of_care": [],
-        "providers": []
+        "providers": [],
+        "organizations": []
     },
     "meta": {
         "type": "cms",
@@ -65,7 +67,6 @@ function cleanUpModel(bbDocumentModel) {
         if (Object.keys(data[x]).length === 0) {
             delete data[x];
         }
-
     }
 }
 
@@ -114,7 +115,8 @@ function convertToBBModel(intermediateObj) {
             "payers": [],
             "claims": [],
             "plan_of_care": [],
-            "providers": []
+            "providers": [],
+            "organizations": []
         },
         "meta": {
             "type": "cms",
@@ -222,14 +224,12 @@ function isEmpty(obj) {
 //main function that will be used to getIntObj
 
 function clean(cmsString) {
-
     if (cmsString.indexOf('\r\n') >= 0) {
         cmsString = cmsString.replace(/\r\n/g, '\n');
         cmsString = cmsString.replace(/\r/g, '\n');
-        //cmsString=cmsString.replace(/\n\n/g, '\n');
-        return cmsString;
+        //cmsString=cmsString.replace(/\n\n/g, '\n')
     }
-
+    cmsString = cmsString.replace(/(\n\n\n\n\n)+/g, '\n\n\n\n');
     return cmsString;
 }
 
@@ -242,27 +242,28 @@ function separateSections(data) {
     //specical metaMatchCode goes first.
 
     // 1st regular expression for meta, need to do
-    var metaMatchCode = '^(-).[\\S\\s]+?(\\n){2,}';
+    var metaMatchCode = '^(-).[\\S\\s]+?(\\n){2,}'; //this isn't used anywhere...
 
     /* 2nd regular expression for claims, because the structure of claims is
   unique */
-    var claimsHeaderMatchCode = '(-){4,}(\\n)*Claim Summary(\\n){2,}(-){4,}';
+    var claimsHeaderMatchCode = '(-){4,}(\\n)*Claim Summary(\\n){2,}(-){4,}'; //  /(-){4,}(\\n)*Claim Summary(\\n){2,}(-){4,}([\\S\\s]+Claim[\\S\\s]+)+(?=((-){4,}))/gi
     var claimsBodyMatchCode = '([\\S\\s]+Claim[\\S\\s]+)+';
     var claimsEndMatchCode = '(?=((-){4,}))';
     var claimsMatchCode = claimsHeaderMatchCode +
         claimsBodyMatchCode + claimsEndMatchCode;
 
     //this match code is for all other sections
-    var headerMatchCode = '(-){4,}[\\S\\s]+?(\\n){2,}(-){4,}';
+    var headerMatchCode = '(-){4,}[\\S\\s]+?(\\n){2,}(-){4,}'; // /(-){4,}[\\S\\s]+?(\\n){2,}(-){4,}[\\S\\s]+?(?=((-){4,}))/ig
     var bodyMatchCode = '[\\S\\s]+?';
     var endMatchCode = '(?=((-){4,}))';
     var sectionMatchCode = headerMatchCode + bodyMatchCode + endMatchCode;
 
     /* The regular expression for everything, search globally and
   ignore capitalization */
-    var totalMatchCode = claimsMatchCode + "|" + sectionMatchCode;
+    var totalMatchCode = claimsMatchCode + "|" + sectionMatchCode; // /(-){4,}(\\n)*Claim Summary(\\n){2,}(-){4,}([\\S\\s]+Claim[\\S\\s]+)+(?=((-){4,}))|(-){4,}[\\S\\s]+?(\\n){2,}(-){4,}[\\S\\s]+?(?=((-){4,}))/ig
     var totalRegExp = new RegExp(totalMatchCode, 'gi');
     var matchArray = data.match(totalRegExp);
+    console.log("matchArray: ", matchArray);
     return matchArray;
 }
 
@@ -290,21 +291,21 @@ function cleanUpTitle(rawTitleString) {
 }
 
 function processMetaChild(objectString) {
-        var obj = {};
-        var metaValueCode = /(\n{2,}?)([\S\s]+?)(?=\n{2,}?)/gi;
-        var metaValues = objectString.match(metaValueCode);
-        var counter = 0;
-        for (var value = 0; value < metaValues.length; value++) {
-            var cleanedMetaValue = metaValues[value].replace(/\n/g, '');
-            if (cleanedMetaValue.length !== 0) {
-                obj[value.toString()] = cleanedMetaValue;
-            }
-            counter++;
+    var obj = {};
+    var metaValueCode = /(\n{2,}?)([\S\s]+?)(?=\n{2,}?)/gi;
+    var metaValues = objectString.match(metaValueCode);
+    var counter = 0;
+    for (var value = 0; value < metaValues.length; value++) {
+        var cleanedMetaValue = metaValues[value].replace(/\n/g, '');
+        if (cleanedMetaValue.length !== 0) {
+            obj[value.toString()] = cleanedMetaValue;
         }
-        return obj;
+        counter++;
     }
-    /*processes objects with keys and values in each section((i.e. drug 1 of
-    demographics */
+    return obj;
+}
+/*processes objects with keys and values in each section((i.e. drug 1 of
+demographics */
 
 function processSectionChild(objectString) {
     //regular expression that matches key value pairs
@@ -693,7 +694,8 @@ module.exports = {
      'other insurance': require('./sections/insurance.js'),
      'claim summary': require('./sections/claims.js'),
      'preventive services': require('./sections/planofcare.js'),
-     "providers": require('./sections/providers.js')
+     "providers": require('./sections/providers.js'),
+     "organizations": []
  };
 
  var sectionRouter = function (sectionName) {
@@ -157506,16 +157508,16 @@ function getValueType(objValue) {
 }
 
 function writeValue(value, obj, key) {
-        var objValue = obj[key];
-        if (objValue instanceof Array) {
-            objValue.push(value);
-        } else if (typeof (objValue) === 'string') {
-            obj[key] = value;
-        } else if (typeof (objValue) === 'object' && objValue instanceof Array) {
-            obj[key] = value;
-        }
+    var objValue = obj[key];
+    if (objValue instanceof Array) {
+        objValue.push(value);
+    } else if (typeof (objValue) === 'string') {
+        obj[key] = value;
+    } else if (typeof (objValue) === 'object' && objValue instanceof Array) {
+        obj[key] = value;
     }
-    //this function ignores all not avaliable value fields
+}
+//this function ignores all not avaliable value fields
 
 function ignoreValue(value) {
     if (value === null || value === undefined || value.length === 0) {
@@ -157895,58 +157897,58 @@ function processMedicarePlanChild(childObj) {
 }
 
 function processEmployerChild(childObj) {
-        var returnChildObj = {};
-        var typeArray = [];
-        var dateArray = {};
-        var tmpInsurerData = {};
+    var returnChildObj = {};
+    var typeArray = [];
+    var dateArray = {};
+    var tmpInsurerData = {};
 
-        typeArray.push('employer subsidy');
-        for (var key in childObj) {
-            key = key.toLowerCase();
-            var value = childObj[key];
-            var ignoreValue = commonFunctions.getFunction('ignore');
-            if (ignoreValue(value)) {
-                continue;
+    typeArray.push('employer subsidy');
+    for (var key in childObj) {
+        key = key.toLowerCase();
+        var value = childObj[key];
+        var ignoreValue = commonFunctions.getFunction('ignore');
+        if (ignoreValue(value)) {
+            continue;
+        }
+        if (key.indexOf('employer plan') >= 0) {
+
+            if (_.isUndefined(tmpInsurerData.name)) {
+                tmpInsurerData.name = [];
             }
-            if (key.indexOf('employer plan') >= 0) {
+            tmpInsurerData.name.push(value);
 
-                if (_.isUndefined(tmpInsurerData.name)) {
-                    tmpInsurerData.name = [];
-                }
-                tmpInsurerData.name.push(value);
-
-            } else if (key.indexOf('start date') >= 0) {
-                dateArray["low"] = processDate(value);
-            } else if (key.indexOf('end date') >= 0) {
-                dateArray["high"] = processDate(value);
-            }
+        } else if (key.indexOf('start date') >= 0) {
+            dateArray["low"] = processDate(value);
+        } else if (key.indexOf('end date') >= 0) {
+            dateArray["high"] = processDate(value);
         }
-
-        if (_.isUndefined(tmpInsurerData.name)) {
-            tmpInsurerData.name = [];
-        }
-        tmpInsurerData.name.push('EMPLOYER SUBSIDY');
-
-        if (_.isUndefined(returnChildObj.policy)) {
-            returnChildObj.policy = {};
-            returnChildObj.policy.insurance = {};
-            returnChildObj.policy.insurance.performer = {};
-            returnChildObj.policy.insurance.performer.organization = [];
-        }
-
-        returnChildObj.policy.insurance.performer.organization.push(tmpInsurerData);
-
-        if (!_.isEmpty(dateArray)) {
-            if (_.isUndefined(returnChildObj.participant)) {
-                returnChildObj.participant = {};
-            }
-            returnChildObj.participant.date_time = dateArray;
-        }
-
-        return returnChildObj;
-
     }
-    //generic insurance plan, for primary insurance and other insurance
+
+    if (_.isUndefined(tmpInsurerData.name)) {
+        tmpInsurerData.name = [];
+    }
+    tmpInsurerData.name.push('EMPLOYER SUBSIDY');
+
+    if (_.isUndefined(returnChildObj.policy)) {
+        returnChildObj.policy = {};
+        returnChildObj.policy.insurance = {};
+        returnChildObj.policy.insurance.performer = {};
+        returnChildObj.policy.insurance.performer.organization = [];
+    }
+
+    returnChildObj.policy.insurance.performer.organization.push(tmpInsurerData);
+
+    if (!_.isEmpty(dateArray)) {
+        if (_.isUndefined(returnChildObj.participant)) {
+            returnChildObj.participant = {};
+        }
+        returnChildObj.participant.date_time = dateArray;
+    }
+
+    return returnChildObj;
+
+}
+//generic insurance plan, for primary insurance and other insurance
 function processInsuranceChild(childObj) {
     var returnChildObj = {};
     var dateArray = {};
@@ -159395,10 +159397,10 @@ module.exports = [{
             "items": {
                 "$ref": "cda_coded_entry"
             }
-        },
-        "npi": {
-            "type": "string"
-        }
+        } //,
+        //"npi": {
+        //    "type": "string"
+        //}
     },
     "additionalProperties": false
 }];
@@ -160098,9 +160100,9 @@ module.exports = {
                         "name": {
                             "$ref": "cda_name"
                         },
-                        "npi": {
-                            "type": "string"
-                        },
+                        //"npi": {
+                        //    "type": "string"
+                        //},
                         "organization": {
                             "$ref": "cda_organization"
                         }
@@ -173023,7 +173025,7 @@ module.exports = new Validator();
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{}],43:[function(require,module,exports){
 /*!
- * Copyright (c) 2014 Chris O'Hara <cohara87@gmail.com>
+ * Copyright (c) 2015 Chris O'Hara <cohara87@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -173057,7 +173059,7 @@ module.exports = new Validator();
 
     'use strict';
 
-    validator = { version: '3.39.0' };
+    validator = { version: '3.40.0' };
 
     var emailUser = /^((([a-z]|\d|[!#\$%&'\*\+\-\/=\?\^_`{\|}~])+(\.([a-z]|\d|[!#\$%&'\*\+\-\/=\?\^_`{\|}~])+)*)|((\x22)((((\x20|\x09)*(\x0d\x0a))?(\x20|\x09)+)?(([\x01-\x08\x0b\x0c\x0e-\x1f\x7f]|\x21|[\x23-\x5b]|[\x5d-\x7e])|(\\[\x01-\x09\x0b\x0c\x0d-\x7f])))*(((\x20|\x09)*(\x0d\x0a))?(\x20|\x09)+)?(\x22)))$/i;
 
@@ -173373,6 +173375,10 @@ module.exports = new Validator();
             }
         }
         return true;
+    };
+
+    validator.isBoolean = function(str) {
+        return (['true', 'false', '1', '0'].indexOf(str) >= 0);
     };
 
     validator.isAlpha = function (str) {
@@ -175972,6 +175978,10 @@ ZSchema.prototype.compileSchema = function (schema) {
     return report.isValid();
 };
 ZSchema.prototype.validateSchema = function (schema) {
+    if (Array.isArray(schema) && schema.length === 0) {
+        throw new Error(".validateSchema was called with an empty array");
+    }
+
     var report = new Report(this.options);
 
     schema = SchemaCache.getSchema.call(this, report, schema);
@@ -175995,23 +176005,32 @@ ZSchema.prototype.validate = function (json, schema, callback) {
         throw e;
     }
 
+    var foundError = false;
     var report = new Report(this.options);
 
     schema = SchemaCache.getSchema.call(this, report, schema);
 
-    var compiled = SchemaCompilation.compileSchema.call(this, report, schema);
+    var compiled = false;
+    if (!foundError) {
+        compiled = SchemaCompilation.compileSchema.call(this, report, schema);
+    }
     if (!compiled) {
         this.lastReport = report;
-        return false;
+        foundError = true;
     }
 
-    var validated = SchemaValidation.validateSchema.call(this, report, schema);
+    var validated = false;
+    if (!foundError) {
+        validated = SchemaValidation.validateSchema.call(this, report, schema);
+    }
     if (!validated) {
         this.lastReport = report;
-        return false;
+        foundError = true;
     }
 
-    JsonValidation.validate.call(this, report, schema, json);
+    if (!foundError) {
+        JsonValidation.validate.call(this, report, schema, json);
+    }
 
     if (callback) {
         report.processAsyncTasks(this.options.asyncTimeout, callback);
@@ -183220,7 +183239,7 @@ var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 }(typeof exports === 'undefined' ? (this.base64js = {}) : exports))
 
 },{}],92:[function(require,module,exports){
-exports.read = function(buffer, offset, isLE, mLen, nBytes) {
+exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m,
       eLen = nBytes * 8 - mLen - 1,
       eMax = (1 << eLen) - 1,
@@ -183228,32 +183247,32 @@ exports.read = function(buffer, offset, isLE, mLen, nBytes) {
       nBits = -7,
       i = isLE ? (nBytes - 1) : 0,
       d = isLE ? -1 : 1,
-      s = buffer[offset + i];
+      s = buffer[offset + i]
 
-  i += d;
+  i += d
 
-  e = s & ((1 << (-nBits)) - 1);
-  s >>= (-nBits);
-  nBits += eLen;
-  for (; nBits > 0; e = e * 256 + buffer[offset + i], i += d, nBits -= 8);
+  e = s & ((1 << (-nBits)) - 1)
+  s >>= (-nBits)
+  nBits += eLen
+  for (; nBits > 0; e = e * 256 + buffer[offset + i], i += d, nBits -= 8) {}
 
-  m = e & ((1 << (-nBits)) - 1);
-  e >>= (-nBits);
-  nBits += mLen;
-  for (; nBits > 0; m = m * 256 + buffer[offset + i], i += d, nBits -= 8);
+  m = e & ((1 << (-nBits)) - 1)
+  e >>= (-nBits)
+  nBits += mLen
+  for (; nBits > 0; m = m * 256 + buffer[offset + i], i += d, nBits -= 8) {}
 
   if (e === 0) {
-    e = 1 - eBias;
+    e = 1 - eBias
   } else if (e === eMax) {
-    return m ? NaN : ((s ? -1 : 1) * Infinity);
+    return m ? NaN : ((s ? -1 : 1) * Infinity)
   } else {
-    m = m + Math.pow(2, mLen);
-    e = e - eBias;
+    m = m + Math.pow(2, mLen)
+    e = e - eBias
   }
-  return (s ? -1 : 1) * m * Math.pow(2, e - mLen);
-};
+  return (s ? -1 : 1) * m * Math.pow(2, e - mLen)
+}
 
-exports.write = function(buffer, value, offset, isLE, mLen, nBytes) {
+exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   var e, m, c,
       eLen = nBytes * 8 - mLen - 1,
       eMax = (1 << eLen) - 1,
@@ -183261,49 +183280,49 @@ exports.write = function(buffer, value, offset, isLE, mLen, nBytes) {
       rt = (mLen === 23 ? Math.pow(2, -24) - Math.pow(2, -77) : 0),
       i = isLE ? 0 : (nBytes - 1),
       d = isLE ? 1 : -1,
-      s = value < 0 || (value === 0 && 1 / value < 0) ? 1 : 0;
+      s = value < 0 || (value === 0 && 1 / value < 0) ? 1 : 0
 
-  value = Math.abs(value);
+  value = Math.abs(value)
 
   if (isNaN(value) || value === Infinity) {
-    m = isNaN(value) ? 1 : 0;
-    e = eMax;
+    m = isNaN(value) ? 1 : 0
+    e = eMax
   } else {
-    e = Math.floor(Math.log(value) / Math.LN2);
+    e = Math.floor(Math.log(value) / Math.LN2)
     if (value * (c = Math.pow(2, -e)) < 1) {
-      e--;
-      c *= 2;
+      e--
+      c *= 2
     }
     if (e + eBias >= 1) {
-      value += rt / c;
+      value += rt / c
     } else {
-      value += rt * Math.pow(2, 1 - eBias);
+      value += rt * Math.pow(2, 1 - eBias)
     }
     if (value * c >= 2) {
-      e++;
-      c /= 2;
+      e++
+      c /= 2
     }
 
     if (e + eBias >= eMax) {
-      m = 0;
-      e = eMax;
+      m = 0
+      e = eMax
     } else if (e + eBias >= 1) {
-      m = (value * c - 1) * Math.pow(2, mLen);
-      e = e + eBias;
+      m = (value * c - 1) * Math.pow(2, mLen)
+      e = e + eBias
     } else {
-      m = value * Math.pow(2, eBias - 1) * Math.pow(2, mLen);
-      e = 0;
+      m = value * Math.pow(2, eBias - 1) * Math.pow(2, mLen)
+      e = 0
     }
   }
 
-  for (; mLen >= 8; buffer[offset + i] = m & 0xff, i += d, m /= 256, mLen -= 8);
+  for (; mLen >= 8; buffer[offset + i] = m & 0xff, i += d, m /= 256, mLen -= 8) {}
 
-  e = (e << mLen) | m;
-  eLen += mLen;
-  for (; eLen > 0; buffer[offset + i] = e & 0xff, i += d, e /= 256, eLen -= 8);
+  e = (e << mLen) | m
+  eLen += mLen
+  for (; eLen > 0; buffer[offset + i] = e & 0xff, i += d, e /= 256, eLen -= 8) {}
 
-  buffer[offset + i - d] |= s * 128;
-};
+  buffer[offset + i - d] |= s * 128
+}
 
 },{}],93:[function(require,module,exports){
 
@@ -183402,7 +183421,7 @@ process.umask = function() { return 0; };
 
 },{}],95:[function(require,module,exports){
 //! moment.js
-//! version : 2.10.2
+//! version : 2.10.3
 //! authors : Tim Wood, Iskren Chernev, Moment.js contributors
 //! license : MIT
 //! momentjs.com
@@ -183425,28 +183444,12 @@ process.umask = function() { return 0; };
         hookCallback = callback;
     }
 
-    function defaultParsingFlags() {
-        // We need to deep clone this object.
-        return {
-            empty           : false,
-            unusedTokens    : [],
-            unusedInput     : [],
-            overflow        : -2,
-            charsLeftOver   : 0,
-            nullInput       : false,
-            invalidMonth    : null,
-            invalidFormat   : false,
-            userInvalidated : false,
-            iso             : false
-        };
-    }
-
     function isArray(input) {
         return Object.prototype.toString.call(input) === '[object Array]';
     }
 
     function isDate(input) {
-        return Object.prototype.toString.call(input) === '[object Date]' || input instanceof Date;
+        return input instanceof Date || Object.prototype.toString.call(input) === '[object Date]';
     }
 
     function map(arr, fn) {
@@ -183483,21 +183486,45 @@ process.umask = function() { return 0; };
         return createLocalOrUTC(input, format, locale, strict, true).utc();
     }
 
+    function defaultParsingFlags() {
+        // We need to deep clone this object.
+        return {
+            empty           : false,
+            unusedTokens    : [],
+            unusedInput     : [],
+            overflow        : -2,
+            charsLeftOver   : 0,
+            nullInput       : false,
+            invalidMonth    : null,
+            invalidFormat   : false,
+            userInvalidated : false,
+            iso             : false
+        };
+    }
+
+    function getParsingFlags(m) {
+        if (m._pf == null) {
+            m._pf = defaultParsingFlags();
+        }
+        return m._pf;
+    }
+
     function valid__isValid(m) {
         if (m._isValid == null) {
+            var flags = getParsingFlags(m);
             m._isValid = !isNaN(m._d.getTime()) &&
-                m._pf.overflow < 0 &&
-                !m._pf.empty &&
-                !m._pf.invalidMonth &&
-                !m._pf.nullInput &&
-                !m._pf.invalidFormat &&
-                !m._pf.userInvalidated;
+                flags.overflow < 0 &&
+                !flags.empty &&
+                !flags.invalidMonth &&
+                !flags.nullInput &&
+                !flags.invalidFormat &&
+                !flags.userInvalidated;
 
             if (m._strict) {
                 m._isValid = m._isValid &&
-                    m._pf.charsLeftOver === 0 &&
-                    m._pf.unusedTokens.length === 0 &&
-                    m._pf.bigHour === undefined;
+                    flags.charsLeftOver === 0 &&
+                    flags.unusedTokens.length === 0 &&
+                    flags.bigHour === undefined;
             }
         }
         return m._isValid;
@@ -183506,10 +183533,10 @@ process.umask = function() { return 0; };
     function valid__createInvalid (flags) {
         var m = create_utc__createUTC(NaN);
         if (flags != null) {
-            extend(m._pf, flags);
+            extend(getParsingFlags(m), flags);
         }
         else {
-            m._pf.userInvalidated = true;
+            getParsingFlags(m).userInvalidated = true;
         }
 
         return m;
@@ -183545,7 +183572,7 @@ process.umask = function() { return 0; };
             to._offset = from._offset;
         }
         if (typeof from._pf !== 'undefined') {
-            to._pf = from._pf;
+            to._pf = getParsingFlags(from);
         }
         if (typeof from._locale !== 'undefined') {
             to._locale = from._locale;
@@ -183580,7 +183607,7 @@ process.umask = function() { return 0; };
     }
 
     function isMoment (obj) {
-        return obj instanceof Moment || (obj != null && hasOwnProp(obj, '_isAMomentObject'));
+        return obj instanceof Moment || (obj != null && obj._isAMomentObject != null);
     }
 
     function toInt(argumentForCoercion) {
@@ -184018,7 +184045,7 @@ process.umask = function() { return 0; };
         if (month != null) {
             array[MONTH] = month;
         } else {
-            config._pf.invalidMonth = input;
+            getParsingFlags(config).invalidMonth = input;
         }
     });
 
@@ -184102,7 +184129,7 @@ process.umask = function() { return 0; };
         var overflow;
         var a = m._a;
 
-        if (a && m._pf.overflow === -2) {
+        if (a && getParsingFlags(m).overflow === -2) {
             overflow =
                 a[MONTH]       < 0 || a[MONTH]       > 11  ? MONTH :
                 a[DATE]        < 1 || a[DATE]        > daysInMonth(a[YEAR], a[MONTH]) ? DATE :
@@ -184112,11 +184139,11 @@ process.umask = function() { return 0; };
                 a[MILLISECOND] < 0 || a[MILLISECOND] > 999 ? MILLISECOND :
                 -1;
 
-            if (m._pf._overflowDayOfYear && (overflow < YEAR || overflow > DATE)) {
+            if (getParsingFlags(m)._overflowDayOfYear && (overflow < YEAR || overflow > DATE)) {
                 overflow = DATE;
             }
 
-            m._pf.overflow = overflow;
+            getParsingFlags(m).overflow = overflow;
         }
 
         return m;
@@ -184129,10 +184156,12 @@ process.umask = function() { return 0; };
     }
 
     function deprecate(msg, fn) {
-        var firstTime = true;
+        var firstTime = true,
+            msgWithStack = msg + '\n' + (new Error()).stack;
+
         return extend(function () {
             if (firstTime) {
-                warn(msg);
+                warn(msgWithStack);
                 firstTime = false;
             }
             return fn.apply(this, arguments);
@@ -184177,7 +184206,7 @@ process.umask = function() { return 0; };
             match = from_string__isoRegex.exec(string);
 
         if (match) {
-            config._pf.iso = true;
+            getParsingFlags(config).iso = true;
             for (i = 0, l = isoDates.length; i < l; i++) {
                 if (isoDates[i][1].exec(string)) {
                     // match[5] should be 'T' or undefined
@@ -184457,7 +184486,7 @@ process.umask = function() { return 0; };
             yearToUse = defaults(config._a[YEAR], currentDate[YEAR]);
 
             if (config._dayOfYear > daysInYear(yearToUse)) {
-                config._pf._overflowDayOfYear = true;
+                getParsingFlags(config)._overflowDayOfYear = true;
             }
 
             date = createUTCDate(yearToUse, 0, config._dayOfYear);
@@ -184553,7 +184582,7 @@ process.umask = function() { return 0; };
         }
 
         config._a = [];
-        config._pf.empty = true;
+        getParsingFlags(config).empty = true;
 
         // This array is used to make a Date, either with `new Date` or `Date.UTC`
         var string = '' + config._i,
@@ -184569,7 +184598,7 @@ process.umask = function() { return 0; };
             if (parsedInput) {
                 skipped = string.substr(0, string.indexOf(parsedInput));
                 if (skipped.length > 0) {
-                    config._pf.unusedInput.push(skipped);
+                    getParsingFlags(config).unusedInput.push(skipped);
                 }
                 string = string.slice(string.indexOf(parsedInput) + parsedInput.length);
                 totalParsedInputLength += parsedInput.length;
@@ -184577,27 +184606,29 @@ process.umask = function() { return 0; };
             // don't parse if it's not a known token
             if (formatTokenFunctions[token]) {
                 if (parsedInput) {
-                    config._pf.empty = false;
+                    getParsingFlags(config).empty = false;
                 }
                 else {
-                    config._pf.unusedTokens.push(token);
+                    getParsingFlags(config).unusedTokens.push(token);
                 }
                 addTimeToArrayFromToken(token, parsedInput, config);
             }
             else if (config._strict && !parsedInput) {
-                config._pf.unusedTokens.push(token);
+                getParsingFlags(config).unusedTokens.push(token);
             }
         }
 
         // add remaining unparsed input length to the string
-        config._pf.charsLeftOver = stringLength - totalParsedInputLength;
+        getParsingFlags(config).charsLeftOver = stringLength - totalParsedInputLength;
         if (string.length > 0) {
-            config._pf.unusedInput.push(string);
+            getParsingFlags(config).unusedInput.push(string);
         }
 
         // clear _12h flag if hour is <= 12
-        if (config._pf.bigHour === true && config._a[HOUR] <= 12) {
-            config._pf.bigHour = undefined;
+        if (getParsingFlags(config).bigHour === true &&
+                config._a[HOUR] <= 12 &&
+                config._a[HOUR] > 0) {
+            getParsingFlags(config).bigHour = undefined;
         }
         // handle meridiem
         config._a[HOUR] = meridiemFixWrap(config._locale, config._a[HOUR], config._meridiem);
@@ -184641,7 +184672,7 @@ process.umask = function() { return 0; };
             currentScore;
 
         if (config._f.length === 0) {
-            config._pf.invalidFormat = true;
+            getParsingFlags(config).invalidFormat = true;
             config._d = new Date(NaN);
             return;
         }
@@ -184652,7 +184683,6 @@ process.umask = function() { return 0; };
             if (config._useUTC != null) {
                 tempConfig._useUTC = config._useUTC;
             }
-            tempConfig._pf = defaultParsingFlags();
             tempConfig._f = config._f[i];
             configFromStringAndFormat(tempConfig);
 
@@ -184661,12 +184691,12 @@ process.umask = function() { return 0; };
             }
 
             // if there is any input that was not parsed add a penalty for that format
-            currentScore += tempConfig._pf.charsLeftOver;
+            currentScore += getParsingFlags(tempConfig).charsLeftOver;
 
             //or tokens
-            currentScore += tempConfig._pf.unusedTokens.length * 10;
+            currentScore += getParsingFlags(tempConfig).unusedTokens.length * 10;
 
-            tempConfig._pf.score = currentScore;
+            getParsingFlags(tempConfig).score = currentScore;
 
             if (scoreToBeat == null || currentScore < scoreToBeat) {
                 scoreToBeat = currentScore;
@@ -184709,6 +184739,8 @@ process.umask = function() { return 0; };
             configFromStringAndArray(config);
         } else if (format) {
             configFromStringAndFormat(config);
+        } else if (isDate(input)) {
+            config._d = input;
         } else {
             configFromInput(config);
         }
@@ -184761,7 +184793,6 @@ process.umask = function() { return 0; };
         c._i = input;
         c._f = format;
         c._strict = strict;
-        c._pf = defaultParsingFlags();
 
         return createFromConfig(c);
     }
@@ -185335,11 +185366,25 @@ process.umask = function() { return 0; };
     }
 
     function from (time, withoutSuffix) {
+        if (!this.isValid()) {
+            return this.localeData().invalidDate();
+        }
         return create__createDuration({to: this, from: time}).locale(this.locale()).humanize(!withoutSuffix);
     }
 
     function fromNow (withoutSuffix) {
         return this.from(local__createLocal(), withoutSuffix);
+    }
+
+    function to (time, withoutSuffix) {
+        if (!this.isValid()) {
+            return this.localeData().invalidDate();
+        }
+        return create__createDuration({from: this, to: time}).locale(this.locale()).humanize(!withoutSuffix);
+    }
+
+    function toNow (withoutSuffix) {
+        return this.to(local__createLocal(), withoutSuffix);
     }
 
     function locale (key) {
@@ -185444,11 +185489,11 @@ process.umask = function() { return 0; };
     }
 
     function parsingFlags () {
-        return extend({}, this._pf);
+        return extend({}, getParsingFlags(this));
     }
 
     function invalidAt () {
-        return this._pf.overflow;
+        return getParsingFlags(this).overflow;
     }
 
     addFormatToken(0, ['gg', 2], 0, function () {
@@ -185599,7 +185644,7 @@ process.umask = function() { return 0; };
         if (weekday != null) {
             week.d = weekday;
         } else {
-            config._pf.invalidWeekday = input;
+            getParsingFlags(config).invalidWeekday = input;
         }
     });
 
@@ -185724,7 +185769,7 @@ process.umask = function() { return 0; };
     });
     addParseToken(['h', 'hh'], function (input, array, config) {
         array[HOUR] = toInt(input);
-        config._pf.bigHour = true;
+        getParsingFlags(config).bigHour = true;
     });
 
     // LOCALES
@@ -185841,6 +185886,8 @@ process.umask = function() { return 0; };
     momentPrototype__proto.format       = format;
     momentPrototype__proto.from         = from;
     momentPrototype__proto.fromNow      = fromNow;
+    momentPrototype__proto.to           = to;
+    momentPrototype__proto.toNow        = toNow;
     momentPrototype__proto.get          = getSet;
     momentPrototype__proto.invalidAt    = invalidAt;
     momentPrototype__proto.isAfter      = isAfter;
@@ -186029,7 +186076,7 @@ process.umask = function() { return 0; };
         }
         // Lenient ordinal parsing accepts just a number in addition to
         // number + (possibly) stuff coming from _ordinalParseLenient.
-        this._ordinalParseLenient = new RegExp(this._ordinalParse.source + '|' + /\d{1,2}/.source);
+        this._ordinalParseLenient = new RegExp(this._ordinalParse.source + '|' + (/\d{1,2}/).source);
     }
 
     var prototype__proto = Locale.prototype;
@@ -186246,13 +186293,13 @@ process.umask = function() { return 0; };
             // handle milliseconds separately because of floating point math errors (issue #1867)
             days = this._days + Math.round(yearsToDays(this._months / 12));
             switch (units) {
-                case 'week'   : return days / 7            + milliseconds / 6048e5;
-                case 'day'    : return days                + milliseconds / 864e5;
-                case 'hour'   : return days * 24           + milliseconds / 36e5;
-                case 'minute' : return days * 24 * 60      + milliseconds / 6e4;
-                case 'second' : return days * 24 * 60 * 60 + milliseconds / 1000;
+                case 'week'   : return days / 7     + milliseconds / 6048e5;
+                case 'day'    : return days         + milliseconds / 864e5;
+                case 'hour'   : return days * 24    + milliseconds / 36e5;
+                case 'minute' : return days * 1440  + milliseconds / 6e4;
+                case 'second' : return days * 86400 + milliseconds / 1000;
                 // Math.floor prevents floating point math errors here
-                case 'millisecond': return Math.floor(days * 24 * 60 * 60 * 1000) + milliseconds;
+                case 'millisecond': return Math.floor(days * 864e5) + milliseconds;
                 default: throw new Error('Unknown unit ' + units);
             }
         }
@@ -186453,7 +186500,7 @@ process.umask = function() { return 0; };
     // Side effect imports
 
 
-    utils_hooks__hooks.version = '2.10.2';
+    utils_hooks__hooks.version = '2.10.3';
 
     setHookCallback(local__createLocal);
 
@@ -188046,6 +188093,26 @@ var bbm = require('blue-button-model');
 describe('parser.js', function () {
     it('CMS parser/model validation', function (done) {
         var txtfile = "--------------------------------\nMYMEDICARE.GOV PERSONAL HEALTH INFORMATION\n\n--------------------------------\n**********CONFIDENTIAL***********\n\nProduced by the Blue Button (v2.0)\n\n03/16/2013 5:10 AM\n\n\n\n\n--------------------------------\nDemographic\n\n--------------------------------\n\nSource: MyMedicare.gov\n\n\n\nName: JOHN DOE\n\nDate of Birth: 01/01/1910\n\nAddress Line 1: 123 ANY ROAD\n\nAddress Line 2: \n\nCity: ANYTOWN\n\nState: VA\n\nZip: 00001\n\nPhone Number: 123-456-7890\n\nEmail: JOHNDOE@example.com\n\nPart A Effective Date: 01/01/2012\n\nPart B Effective Date: 01/01/2012\n\n\n\n--------------------------------\nEmergency Contact\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nContact Name: JANE DOE\n\nAddress Type:Home\n\nAddress Line 1: 123 AnyWhere St\n\nAddress Line 2: \n\nCity: AnyWhere\n\nState: DC\n\nZip: 00002-1111\n\nRelationship: Other\n\nHome Phone: 123-456-7890\n\nWork Phone: 000-001-0001\n\nMobile Phone: 000-001-0002\n\nEmail Address: JANEDOE@example.com\n\n\n\nContact Name: STEVE DOE\n\nAddress Type:\n\nAddress Line 1: 123 AnyWhere Rd\n\nAddress Line 2: \n\nCity: AnyWhere\n\nState: VA\n\nZip: 00001\n\nRelationship: Other\n\nHome Phone: 123-456-7890\n\nWork Phone: 000-001-0001\n\nMobile Phone: 000-001-0002\n\nEmail Address: STEVEDOE@example.com\n\n\n\n--------------------------------\nSelf Reported Medical Conditions\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nCondition Name: Arthritis\n\nMedical Condition Start Date: 08/09/2005\n\nMedical Condition End Date: 02/28/2011\n\n\n\nCondition Name: Asthma\n\nMedical Condition Start Date: 01/25/2008\n\nMedical Condition End Date: 01/25/2010\n\n\n\n--------------------------------\nSelf Reported Allergies\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nAllergy Name: Antibotic\n\nType: Drugs\n\nReaction: Vomiting\n\nSeverity: Severe\n\nDiagnosed: Yes\n\nTreatment: Allergy Shots\n\nFirst Episode Date: 01/08/1926\n\nLast Episode Date: 03/13/1955\n\nLast Treatment Date: 09/28/1949\n\nComments: Erythromycin \n\n\n\nAllergy Name: Grasses\n\nType: Environmental\n\nReaction: Sneezing\n\nSeverity: Severe\n\nDiagnosed: Yes\n\nTreatment: Avoidance\n\nFirst Episode Date: 05/13/1973\n\nLast Episode Date: 07/20/1996\n\nLast Treatment Date: 09/27/2008\n\nComments: \n\n\n\n--------------------------------\nSelf Reported Implantable Device\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nDevice Name: Artificial Eye Lenses\n\nDate Implanted: 1/27/1942\n\n\n\n--------------------------------\nSelf Reported Immunizations\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nImmunization Name: Varicella/Chicken Pox\n\nDate Administered:04/21/2002\n\nMethod: Nasal Spray(mist)\n\nWere you vaccinated in the US: \n\nComments: congestion\n\nBooster 1 Date: 02/02/1990\n\nBooster 2 Date: \n\nBooster 3 Date: \n\n\n\nImmunization Name: typhoid\n\nDate Administered:01/02/2009\n\nMethod: Injection\n\nWere you vaccinated in the US: \n\nComments: \n\nBooster 1 Date: \n\nBooster 2 Date: \n\nBooster 3 Date: \n\n\n\n--------------------------------\nSelf Reported Labs and Tests\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nTest/Lab Type: Glucose Level\nDate Taken: 03/21/2008\n\nAdministered by: AnyLab\n\nRequesting Doctor: Dr. Smith\n\nReason Test/Lab Requested: Ongoing elevated glucose\n\nResults: 135, 170, 150, 120\n\nComments: Fasting, hour 1, hour 2, hour 3\n\n\n\n--------------------------------\nSelf Reported Vital Statistics\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nVital Statistic Type: Blood Pressure\n\nDate: 07/22/2011\n\nTime: 3:00 PM\n\nReading: 120/80\n\nComments: \n\n\n\nVital Statistic Type: Glucose\n\nDate: 03/20/2012\n\nTime: 12:00 PM\n\nReading: 110\n\nComments: \n\n\n\n--------------------------------\nFamily Medical History\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nFamily Member: Brother\n\nType: \n\nDOB:1/10/1915\n\nDOD: \n\nAge: \n\nType: Allergy\n\nDescription: Antiarrythmia\n\nDescription: Antibiotic\n\nDescription: Anticonvulsants\n\nType: Condition\n\nDescription: Allergies\n\nDescription: Alzheimer's Disease\n\nDescription: Angina (Heart Pain)\n\nDescription: Cataracts\n\n\n--------------------------------\nDrugs\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nDrug Name: Aspirin\n\nSupply: Dialy\n\nOrig Drug Entry: Aspirin\n\n\n\n--------------------------------\nPreventive Services\n\n--------------------------------\n\nSource: MyMedicare.gov\n\n\n\nDescription: DIABETES\n\nNext Eligible Date: 10/1/2011\n\nLast Date of Service: \n\n\n\nDescription: PAP TEST DR\n\nNext Eligible Date: 10/1/2011\n\nLast Date of Service: \n\n\n\nDescription: ABDOMINAL AORTIC ANEURYSM\n\nNext Eligible Date: 7/1/2012\n\nLast Date of Service: \n\n\n\nDescription: ANNUAL WELLNESS VISIT\n\nNext Eligible Date: 1/1/2013\n\nLast Date of Service: \n\n\n\nDescription: DEPRESSION SCREENING\n\nNext Eligible Date: 10/14/2012\n\nLast Date of Service: \n\n\n\n--------------------------------\nProviders\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nProvider Name: ANY CARE\n\nProvider Address: 123 Any Rd, Anywhere, MD 99999\n\nType: NHC\n\nSpecialty: \n\nMedicare Provider: Not Available\n\n\n\nProvider Name: ANY HOSPITAL1\n\nProvider Address: 123 Drive, Anywhere, VA 00001\n\nType: HOS\n\nSpecialty: \n\nMedicare Provider: Not Available\n\nProvider Name: Jane Doe\n\nProvider Address: 123 Road, Anywhere, VA 00001\n\nType: PHY\n\nSpecialty: Other\n\nMedicare Provider: Not Available\n\n\n\n--------------------------------\nPharmacies\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nPharmacy Name: PHARMACY, EAST STREET ANYWHERE, DC 00002\n\nPharmacy Phone: 000-000-0001\n\n\n\nPharmacy Name: ANY PHARMACY, WEST STREET ANYWHERE, VA 00001\n\nPharmacy Phone: 000-000-0002\n\n\n\n--------------------------------\nPlans\n\n--------------------------------\n\nSource: MyMedicare.gov\n\n\n\nContract ID/Plan ID: H9999/9999\n\nPlan Period: 09/01/2011 - current\n\nPlan Name: A Medicare Plan Plus (HMO)\n\nMarketing Name: HealthCare Payer\n\nPlan Address: 123 Any Road Anytown PA 00003\n\nPlan Type: 3 - Coordinated Care Plan (HMO, PPO, PSO, SNP)\n\n\n\nContract ID/Plan ID: S9999/000\n\nPlan Period: 01/01/2010 - current\n\nPlan Name: A Medicare Rx Plan (PDP)\n\nMarketing Name: Another HealthCare Payer\n\nPlan Address: 123 Any Road Anytown PA 00003\n\nPlan Type: 11 - Medicare Prescription Drug Plan\n\n\n\n--------------------------------\nEmployer Subsidy\n\n--------------------------------\n\nSource: MyMedicare.gov\n\n\nEmployer Plan: STATE HEALTH BENEFITS PROGRAM\n\nEmployer Subsidy Start Date: 01/01/2011\n\nEmployer Subsidy End Date: 12/31/2011\n\n\n--------------------------------\nPrimary Insurance\n\n--------------------------------\n\nSource: MyMedicare.gov\n\n\n\nMSP Type: End stage Renal Disease (ESRD)\n\nPolicy Number: 1234567890\n\nInsurer Name: Insurer1\n\nInsurer Address: PO BOX 0000 Anytown, CO 00002-0000\n\nEffective Date: 01/01/2011\n\nTermination Date: 09/30/2011\n\n\n\nMSP Type: End stage Renal Disease (ESRD)\n\nPolicy Number: 12345678901\n\nInsurer Name: Insurer2\n\nInsurer Address: 0000 Any ROAD ANYWHERE, VA 00000-0000\n\nEffective Date: 01/01/2010\n\nTermination Date: 12/31/2010\n\n\n\n--------------------------------\nOther Insurance\n\n--------------------------------\n\nSource: MyMedicare.gov\n\n\n\nMSP Type: \n\nPolicy Number: 00001\n\nInsurer Name: Insurer\n\nInsurer Address: 00 Address STREET ANYWHERE, PA 00000\n\nEffective Date: 10/01/1984\n\nTermination Date: 11/30/2008\n\n\n\n--------------------------------\nClaim Summary\n\n--------------------------------\n\nSource: MyMedicare.gov\n\n\n\nClaim Number: 1234567890000\n\nProvider: No Information Available \nProvider Billing Address:    \n\nService Start Date: 10/18/2012\n\nService End Date: \n\nAmount Charged: $60.00\n\nMedicare Approved: $34.00\n\nProvider Paid: $27.20\n\nYou May be Billed: $6.80\n\nClaim Type: PartB\n\nDiagnosis Code 1: 3534\nDiagnosis Code 2: 7393\nDiagnosis Code 3: 7392\nDiagnosis Code 4: 3533 \n\n--------------------------------\nClaim Lines for Claim Number: 1234567890000\n\n--------------------------------\n\n\n\nLine number:  1\n\nDate of Service From:  10/18/2012\n\nDate of Service To:  10/18/2012\n\nProcedure Code/Description:  98941 - Chiropractic Manipulative Treatment (Cmt); Spinal, Three To Four Regions\n\nModifier 1/Description:  AT - Acute Treatment (This Modifier Should Be Used When Reporting Service 98940, 98941, 98942)\n\nModifier 2/Description:  \n\nModifier 3/Description:  \n\nModifier 4/Description:  \n\nQuantity Billed/Units:  1\n\nSubmitted Amount/Charges:  $60.00\n\nAllowed Amount:  $34.00\n\nNon-Covered:  $26.00\n\nPlace of Service/Description:  11 - Office\n\nType of Service/Description:  1 - Medical Care\n\nRendering Provider No:  0000001\n\nRendering Provider NPI:  123456789\n\n\n\n--------------------------------\n\n\n\n--------------------------------\n\n\n\nClaim Number: 12345678900000VAA\n\nProvider: No Information Available\n \nProvider Billing Address:    \n\nService Start Date: 09/22/2012\n\nService End Date: \n\nAmount Charged: $504.80\n\nMedicare Approved: $504.80\n\nProvider Paid: $126.31\n\nYou May be Billed: $38.84\n\nClaim Type: Outpatient\n\nDiagnosis Code 1: 56400\nDiagnosis Code 2: 7245\nDiagnosis Code 3: V1588\n\n--------------------------------\nClaim Lines for Claim Number: 12345678900000VAA\n\n--------------------------------\n\n\n\nLine number:  1\n\nDate of Service From:  09/22/2012\n\nRevenue Code/Description: 0250 - General Classification PHARMACY\n\nProcedure Code/Description:  \n\nModifier 1/Description:  \n\nModifier 2/Description:  \n\nModifier 3/Description:  \n\nModifier 4/Description:  \n\nQuantity Billed/Units:  1\n\nSubmitted Amount/Charges:  $14.30\n\nAllowed Amount:  $14.30\n\nNon-Covered:  $0.00\n\n\n\nLine number:  2\n\nDate of Service From:  09/22/2012\n\nRevenue Code/Description: 0320 - General Classification DX X-RAY\n\nProcedure Code/Description:  74020 - Radiologic Examination, Abdomen; Complete, Including Decubitus And/Or Erect Views\n\nModifier 1/Description:  \n\nModifier 2/Description:  \n\nModifier 3/Description:  \n\nModifier 4/Description:  \n\nQuantity Billed/Units:  1\n\nSubmitted Amount/Charges:  $175.50\n\nAllowed Amount:  $175.50\n\nNon-Covered:  $0.00\n\n\n\nLine number:  3\n\nDate of Service From:  09/22/2012\n\nRevenue Code/Description: 0450 - General Classification EMERG ROOM\n\nProcedure Code/Description:  99283 - Emergency Department Visit For The Evaluation And Management Of A Patient, Which Requires Th\n\nModifier 1/Description:  25 - Significant, Separately Identifiable Evaluation And Management Service By The Same Physician On\n\nModifier 2/Description:  \n\nModifier 3/Description:  \n\nModifier 4/Description:  \n\nQuantity Billed/Units:  1\n\nSubmitted Amount/Charges:  $315.00\n\nAllowed Amount:  $315.00\n\nNon-Covered:  $0.00\n\n\n\nLine number:  4\n\nDate of Service From:  \n\nRevenue Code/Description: 0001 - Total Charges\n\nProcedure Code/Description:  \n\nModifier 1/Description:  \n\nModifier 2/Description:  \n\nModifier 3/Description:  \n\nModifier 4/Description:  \n\nQuantity Billed/Units:  0\n\nSubmitted Amount/Charges:  $504.80\n\nAllowed Amount:  $504.80\n\nNon-Covered:  $0.00\n\nClaim Number: 1234567890123\n\nProvider: No Information Available\n\nProvider Billing Address:    \n\nService Start Date: 12/01/2012\n\nService End Date: \n\nAmount Charged: * Not Available *\n\nMedicare Approved: * Not Available *\n\nProvider Paid: * Not Available *\n\nYou May be Billed: * Not Available *\n\nClaim Type: PartB\n\nDiagnosis Code 1: 7392\nDiagnosis Code 2: 7241\nDiagnosis Code 3: 7393\nDiagnosis Code 4: 7391\n\n--------------------------------\nClaim Lines for Claim Number: 1234567890123\n\n--------------------------------\n\n\n\nLine number:  1\n\nDate of Service From:  12/01/2012\n\nDate of Service To:  12/01/2012\n\nProcedure Code/Description:  98941 - Chiropractic Manipulative Treatment, 3 To 4 Spinal Regions\n\nModifier 1/Description:  GA - Waiver Of Liability Statement Issued As Required By Payer Policy, Individual Case\n\nModifier 2/Description:  \n\nModifier 3/Description:  \n\nModifier 4/Description:  \n\nQuantity Billed/Units:  1\n\nSubmitted Amount/Charges:  * Not Available *\n\nAllowed Amount:  * Not Available *\n\nNon-Covered:  * Not Available *\n\nPlace of Service/Description:  11 - Office\n\nType of Service/Description:  1 - Medical Care\n\nRendering Provider No:  123456\n\nRendering Provider NPI:  123456789\n\n\n\nLine number:  2\n\nDate of Service From:  12/01/2012\n\nDate of Service To:  12/01/2012\n\nProcedure Code/Description:  G0283 - Electrical Stimulation (Unattended), To One Or More Areas For Indication(S) Other Than Wound\n\nModifier 1/Description:  GY - Item Or Service Statutorily Excluded, Does Not Meet The Definition Of Any Medicare Benefit Or,\n\nModifier 2/Description:  \n\nModifier 3/Description:  \n\nModifier 4/Description:  \n\nQuantity Billed/Units:  1\n\nSubmitted Amount/Charges:  * Not Available *\n\nAllowed Amount:  * Not Available *\n\nNon-Covered:  * Not Available *\n\nPlace of Service/Description:  11 - Office\n\nType of Service/Description:  1 - Medical Care\n\nRendering Provider No:  123456\n\nRendering Provider NPI:  123456789\n\n\n\n--------------------------------\nClaim Lines for Claim Number: 123456789012\n\n--------------------------------\n\n\n\nClaim Type: Part D\n\nClaim Number: 123456789012\n\nClaim Service Date: 11/17/2011\n\nPharmacy / Service Provider: 123456789\n\nPharmacy Name: PHARMACY2 #00000\n\nDrug Code: 00093013505\n\nDrug Name: CARVEDILOL\n\nFill Number: 0\n\nDays' Supply: 30\n\nPrescriber Identifer: 123456789\n\nPrescriber Name: Jane Doe\n\n\n\n--------------------------------\nClaim Lines for Claim Number: 123456789011\n\n--------------------------------\n\n\n\nClaim Type: Part D\n\nClaim Number: 123456789011\n\nClaim Service Date: 11/23/2011\n\nPharmacy / Service Provider: 1234567890\n\nPharmacy Name: PHARMACY3 #00000\n\nDrug Code: 00781223310\n\nDrug Name: OMEPRAZOLE\n\nFill Number: 4\n\nDays' Supply: 30\n\nPrescriber Identifer: 123456789\n\nPrescriber Name: Jane Doe\n\n\n\n--------------------------------\n\n\n\n";
+
+        expect(txtfile).to.exist;
+
+        //convert string into JSON
+        var result = bbcms.parseText(txtfile);
+        expect(result).to.exist;
+
+        var valid = bbm.validator.validateDocumentModel(result);
+
+        if (!valid) {
+            console.log("Errors: \n", JSON.stringify(bbm.validator.getLastError(), null, 4));
+        }
+
+        expect(valid).to.be.true;
+
+        done();
+    });
+
+    it('Extra line breaks before sections', function (done) {
+        var txtfile = "--------------------------------\nMYMEDICARE.GOV PERSONAL HEALTH INFORMATION\n\n--------------------------------\n**********CONFIDENTIAL***********\n\nProduced by the Blue Button (v2.0)\n\n03/16/2013 5:10 AM\n\n\n\n\n--------------------------------\nDemographic\n\n--------------------------------\n\nSource: MyMedicare.gov\n\n\n\nName: JOHN DOE\n\nDate of Birth: 01/01/1910\n\nAddress Line 1: 123 ANY ROAD\n\nAddress Line 2: \n\nCity: ANYTOWN\n\nState: VA\n\nZip: 00001\n\nPhone Number: 123-456-7890\n\nEmail: JOHNDOE@example.com\n\nPart A Effective Date: 01/01/2012\n\nPart B Effective Date: 01/01/2012\n\n\n\n--------------------------------\nEmergency Contact\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nContact Name: JANE DOE\n\nAddress Type:Home\n\nAddress Line 1: 123 AnyWhere St\n\nAddress Line 2: \n\nCity: AnyWhere\n\nState: DC\n\nZip: 00002-1111\n\nRelationship: Other\n\nHome Phone: 123-456-7890\n\nWork Phone: 000-001-0001\n\nMobile Phone: 000-001-0002\n\nEmail Address: JANEDOE@example.com\n\n\n\nContact Name: STEVE DOE\n\nAddress Type:\n\nAddress Line 1: 123 AnyWhere Rd\n\nAddress Line 2: \n\nCity: AnyWhere\n\nState: VA\n\nZip: 00001\n\nRelationship: Other\n\nHome Phone: 123-456-7890\n\nWork Phone: 000-001-0001\n\nMobile Phone: 000-001-0002\n\nEmail Address: STEVEDOE@example.com\n\n\n\n--------------------------------\nSelf Reported Medical Conditions\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nCondition Name: Arthritis\n\nMedical Condition Start Date: 08/09/2005\n\nMedical Condition End Date: 02/28/2011\n\n\n\nCondition Name: Asthma\n\nMedical Condition Start Date: 01/25/2008\n\nMedical Condition End Date: 01/25/2010\n\n\n\n--------------------------------\nSelf Reported Allergies\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nAllergy Name: Antibotic\n\nType: Drugs\n\nReaction: Vomiting\n\nSeverity: Severe\n\nDiagnosed: Yes\n\nTreatment: Allergy Shots\n\nFirst Episode Date: 01/08/1926\n\nLast Episode Date: 03/13/1955\n\nLast Treatment Date: 09/28/1949\n\nComments: Erythromycin \n\n\n\nAllergy Name: Grasses\n\nType: Environmental\n\nReaction: Sneezing\n\nSeverity: Severe\n\nDiagnosed: Yes\n\nTreatment: Avoidance\n\nFirst Episode Date: 05/13/1973\n\nLast Episode Date: 07/20/1996\n\nLast Treatment Date: 09/27/2008\n\nComments: \n\n\n\n\n--------------------------------\nSelf Reported Implantable Device\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nDevice Name: Artificial Eye Lenses\n\nDate Implanted: 1/27/1942\n\n\n\n--------------------------------\nSelf Reported Immunizations\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nImmunization Name: Varicella/Chicken Pox\n\nDate Administered:04/21/2002\n\nMethod: Nasal Spray(mist)\n\nWere you vaccinated in the US: \n\nComments: congestion\n\nBooster 1 Date: 02/02/1990\n\nBooster 2 Date: \n\nBooster 3 Date: \n\n\n\nImmunization Name: typhoid\n\nDate Administered:01/02/2009\n\nMethod: Injection\n\nWere you vaccinated in the US: \n\nComments: \n\nBooster 1 Date: \n\nBooster 2 Date: \n\nBooster 3 Date: \n\n\n\n--------------------------------\nSelf Reported Labs and Tests\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nTest/Lab Type: Glucose Level\nDate Taken: 03/21/2008\n\nAdministered by: AnyLab\n\nRequesting Doctor: Dr. Smith\n\nReason Test/Lab Requested: Ongoing elevated glucose\n\nResults: 135, 170, 150, 120\n\nComments: Fasting, hour 1, hour 2, hour 3\n\n\n\n--------------------------------\nSelf Reported Vital Statistics\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nVital Statistic Type: Blood Pressure\n\nDate: 07/22/2011\n\nTime: 3:00 PM\n\nReading: 120/80\n\nComments: \n\n\n\nVital Statistic Type: Glucose\n\nDate: 03/20/2012\n\nTime: 12:00 PM\n\nReading: 110\n\nComments: \n\n\n\n--------------------------------\nFamily Medical History\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nFamily Member: Brother\n\nType: \n\nDOB:1/10/1915\n\nDOD: \n\nAge: \n\nType: Allergy\n\nDescription: Antiarrythmia\n\nDescription: Antibiotic\n\nDescription: Anticonvulsants\n\nType: Condition\n\nDescription: Allergies\n\nDescription: Alzheimer's Disease\n\nDescription: Angina (Heart Pain)\n\nDescription: Cataracts\n\n\n--------------------------------\nDrugs\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nDrug Name: Aspirin\n\nSupply: Dialy\n\nOrig Drug Entry: Aspirin\n\n\n\n--------------------------------\nPreventive Services\n\n--------------------------------\n\nSource: MyMedicare.gov\n\n\n\nDescription: DIABETES\n\nNext Eligible Date: 10/1/2011\n\nLast Date of Service: \n\n\n\nDescription: PAP TEST DR\n\nNext Eligible Date: 10/1/2011\n\nLast Date of Service: \n\n\n\nDescription: ABDOMINAL AORTIC ANEURYSM\n\nNext Eligible Date: 7/1/2012\n\nLast Date of Service: \n\n\n\nDescription: ANNUAL WELLNESS VISIT\n\nNext Eligible Date: 1/1/2013\n\nLast Date of Service: \n\n\n\nDescription: DEPRESSION SCREENING\n\nNext Eligible Date: 10/14/2012\n\nLast Date of Service: \n\n\n\n--------------------------------\nProviders\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nProvider Name: ANY CARE\n\nProvider Address: 123 Any Rd, Anywhere, MD 99999\n\nType: NHC\n\nSpecialty: \n\nMedicare Provider: Not Available\n\n\n\nProvider Name: ANY HOSPITAL1\n\nProvider Address: 123 Drive, Anywhere, VA 00001\n\nType: HOS\n\nSpecialty: \n\nMedicare Provider: Not Available\n\nProvider Name: Jane Doe\n\nProvider Address: 123 Road, Anywhere, VA 00001\n\nType: PHY\n\nSpecialty: Other\n\nMedicare Provider: Not Available\n\n\n\n--------------------------------\nPharmacies\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nPharmacy Name: PHARMACY, EAST STREET ANYWHERE, DC 00002\n\nPharmacy Phone: 000-000-0001\n\n\n\nPharmacy Name: ANY PHARMACY, WEST STREET ANYWHERE, VA 00001\n\nPharmacy Phone: 000-000-0002\n\n\n\n--------------------------------\nPlans\n\n--------------------------------\n\nSource: MyMedicare.gov\n\n\n\nContract ID/Plan ID: H9999/9999\n\nPlan Period: 09/01/2011 - current\n\nPlan Name: A Medicare Plan Plus (HMO)\n\nMarketing Name: HealthCare Payer\n\nPlan Address: 123 Any Road Anytown PA 00003\n\nPlan Type: 3 - Coordinated Care Plan (HMO, PPO, PSO, SNP)\n\n\n\nContract ID/Plan ID: S9999/000\n\nPlan Period: 01/01/2010 - current\n\nPlan Name: A Medicare Rx Plan (PDP)\n\nMarketing Name: Another HealthCare Payer\n\nPlan Address: 123 Any Road Anytown PA 00003\n\nPlan Type: 11 - Medicare Prescription Drug Plan\n\n\n\n--------------------------------\nEmployer Subsidy\n\n--------------------------------\n\nSource: MyMedicare.gov\n\n\nEmployer Plan: STATE HEALTH BENEFITS PROGRAM\n\nEmployer Subsidy Start Date: 01/01/2011\n\nEmployer Subsidy End Date: 12/31/2011\n\n\n--------------------------------\nPrimary Insurance\n\n--------------------------------\n\nSource: MyMedicare.gov\n\n\n\nMSP Type: End stage Renal Disease (ESRD)\n\nPolicy Number: 1234567890\n\nInsurer Name: Insurer1\n\nInsurer Address: PO BOX 0000 Anytown, CO 00002-0000\n\nEffective Date: 01/01/2011\n\nTermination Date: 09/30/2011\n\n\n\nMSP Type: End stage Renal Disease (ESRD)\n\nPolicy Number: 12345678901\n\nInsurer Name: Insurer2\n\nInsurer Address: 0000 Any ROAD ANYWHERE, VA 00000-0000\n\nEffective Date: 01/01/2010\n\nTermination Date: 12/31/2010\n\n\n\n--------------------------------\nOther Insurance\n\n--------------------------------\n\nSource: MyMedicare.gov\n\n\n\nMSP Type: \n\nPolicy Number: 00001\n\nInsurer Name: Insurer\n\nInsurer Address: 00 Address STREET ANYWHERE, PA 00000\n\nEffective Date: 10/01/1984\n\nTermination Date: 11/30/2008\n\n\n\n--------------------------------\nClaim Summary\n\n--------------------------------\n\nSource: MyMedicare.gov\n\n\n\nClaim Number: 1234567890000\n\nProvider: No Information Available \nProvider Billing Address:    \n\nService Start Date: 10/18/2012\n\nService End Date: \n\nAmount Charged: $60.00\n\nMedicare Approved: $34.00\n\nProvider Paid: $27.20\n\nYou May be Billed: $6.80\n\nClaim Type: PartB\n\nDiagnosis Code 1: 3534\nDiagnosis Code 2: 7393\nDiagnosis Code 3: 7392\nDiagnosis Code 4: 3533 \n\n--------------------------------\nClaim Lines for Claim Number: 1234567890000\n\n--------------------------------\n\n\n\nLine number:  1\n\nDate of Service From:  10/18/2012\n\nDate of Service To:  10/18/2012\n\nProcedure Code/Description:  98941 - Chiropractic Manipulative Treatment (Cmt); Spinal, Three To Four Regions\n\nModifier 1/Description:  AT - Acute Treatment (This Modifier Should Be Used When Reporting Service 98940, 98941, 98942)\n\nModifier 2/Description:  \n\nModifier 3/Description:  \n\nModifier 4/Description:  \n\nQuantity Billed/Units:  1\n\nSubmitted Amount/Charges:  $60.00\n\nAllowed Amount:  $34.00\n\nNon-Covered:  $26.00\n\nPlace of Service/Description:  11 - Office\n\nType of Service/Description:  1 - Medical Care\n\nRendering Provider No:  0000001\n\nRendering Provider NPI:  123456789\n\n\n\n--------------------------------\n\n\n\n--------------------------------\n\n\n\nClaim Number: 12345678900000VAA\n\nProvider: No Information Available\n \nProvider Billing Address:    \n\nService Start Date: 09/22/2012\n\nService End Date: \n\nAmount Charged: $504.80\n\nMedicare Approved: $504.80\n\nProvider Paid: $126.31\n\nYou May be Billed: $38.84\n\nClaim Type: Outpatient\n\nDiagnosis Code 1: 56400\nDiagnosis Code 2: 7245\nDiagnosis Code 3: V1588\n\n--------------------------------\nClaim Lines for Claim Number: 12345678900000VAA\n\n--------------------------------\n\n\n\nLine number:  1\n\nDate of Service From:  09/22/2012\n\nRevenue Code/Description: 0250 - General Classification PHARMACY\n\nProcedure Code/Description:  \n\nModifier 1/Description:  \n\nModifier 2/Description:  \n\nModifier 3/Description:  \n\nModifier 4/Description:  \n\nQuantity Billed/Units:  1\n\nSubmitted Amount/Charges:  $14.30\n\nAllowed Amount:  $14.30\n\nNon-Covered:  $0.00\n\n\n\nLine number:  2\n\nDate of Service From:  09/22/2012\n\nRevenue Code/Description: 0320 - General Classification DX X-RAY\n\nProcedure Code/Description:  74020 - Radiologic Examination, Abdomen; Complete, Including Decubitus And/Or Erect Views\n\nModifier 1/Description:  \n\nModifier 2/Description:  \n\nModifier 3/Description:  \n\nModifier 4/Description:  \n\nQuantity Billed/Units:  1\n\nSubmitted Amount/Charges:  $175.50\n\nAllowed Amount:  $175.50\n\nNon-Covered:  $0.00\n\n\n\nLine number:  3\n\nDate of Service From:  09/22/2012\n\nRevenue Code/Description: 0450 - General Classification EMERG ROOM\n\nProcedure Code/Description:  99283 - Emergency Department Visit For The Evaluation And Management Of A Patient, Which Requires Th\n\nModifier 1/Description:  25 - Significant, Separately Identifiable Evaluation And Management Service By The Same Physician On\n\nModifier 2/Description:  \n\nModifier 3/Description:  \n\nModifier 4/Description:  \n\nQuantity Billed/Units:  1\n\nSubmitted Amount/Charges:  $315.00\n\nAllowed Amount:  $315.00\n\nNon-Covered:  $0.00\n\n\n\nLine number:  4\n\nDate of Service From:  \n\nRevenue Code/Description: 0001 - Total Charges\n\nProcedure Code/Description:  \n\nModifier 1/Description:  \n\nModifier 2/Description:  \n\nModifier 3/Description:  \n\nModifier 4/Description:  \n\nQuantity Billed/Units:  0\n\nSubmitted Amount/Charges:  $504.80\n\nAllowed Amount:  $504.80\n\nNon-Covered:  $0.00\n\nClaim Number: 1234567890123\n\nProvider: No Information Available\n\nProvider Billing Address:    \n\nService Start Date: 12/01/2012\n\nService End Date: \n\nAmount Charged: * Not Available *\n\nMedicare Approved: * Not Available *\n\nProvider Paid: * Not Available *\n\nYou May be Billed: * Not Available *\n\nClaim Type: PartB\n\nDiagnosis Code 1: 7392\nDiagnosis Code 2: 7241\nDiagnosis Code 3: 7393\nDiagnosis Code 4: 7391\n\n--------------------------------\nClaim Lines for Claim Number: 1234567890123\n\n--------------------------------\n\n\n\nLine number:  1\n\nDate of Service From:  12/01/2012\n\nDate of Service To:  12/01/2012\n\nProcedure Code/Description:  98941 - Chiropractic Manipulative Treatment, 3 To 4 Spinal Regions\n\nModifier 1/Description:  GA - Waiver Of Liability Statement Issued As Required By Payer Policy, Individual Case\n\nModifier 2/Description:  \n\nModifier 3/Description:  \n\nModifier 4/Description:  \n\nQuantity Billed/Units:  1\n\nSubmitted Amount/Charges:  * Not Available *\n\nAllowed Amount:  * Not Available *\n\nNon-Covered:  * Not Available *\n\nPlace of Service/Description:  11 - Office\n\nType of Service/Description:  1 - Medical Care\n\nRendering Provider No:  123456\n\nRendering Provider NPI:  123456789\n\n\n\nLine number:  2\n\nDate of Service From:  12/01/2012\n\nDate of Service To:  12/01/2012\n\nProcedure Code/Description:  G0283 - Electrical Stimulation (Unattended), To One Or More Areas For Indication(S) Other Than Wound\n\nModifier 1/Description:  GY - Item Or Service Statutorily Excluded, Does Not Meet The Definition Of Any Medicare Benefit Or,\n\nModifier 2/Description:  \n\nModifier 3/Description:  \n\nModifier 4/Description:  \n\nQuantity Billed/Units:  1\n\nSubmitted Amount/Charges:  * Not Available *\n\nAllowed Amount:  * Not Available *\n\nNon-Covered:  * Not Available *\n\nPlace of Service/Description:  11 - Office\n\nType of Service/Description:  1 - Medical Care\n\nRendering Provider No:  123456\n\nRendering Provider NPI:  123456789\n\n\n\n--------------------------------\nClaim Lines for Claim Number: 123456789012\n\n--------------------------------\n\n\n\nClaim Type: Part D\n\nClaim Number: 123456789012\n\nClaim Service Date: 11/17/2011\n\nPharmacy / Service Provider: 123456789\n\nPharmacy Name: PHARMACY2 #00000\n\nDrug Code: 00093013505\n\nDrug Name: CARVEDILOL\n\nFill Number: 0\n\nDays' Supply: 30\n\nPrescriber Identifer: 123456789\n\nPrescriber Name: Jane Doe\n\n\n\n--------------------------------\nClaim Lines for Claim Number: 123456789011\n\n--------------------------------\n\n\n\nClaim Type: Part D\n\nClaim Number: 123456789011\n\nClaim Service Date: 11/23/2011\n\nPharmacy / Service Provider: 1234567890\n\nPharmacy Name: PHARMACY3 #00000\n\nDrug Code: 00781223310\n\nDrug Name: OMEPRAZOLE\n\nFill Number: 4\n\nDays' Supply: 30\n\nPrescriber Identifer: 123456789\n\nPrescriber Name: Jane Doe\n\n\n\n--------------------------------\n\n\n\n";
 
         expect(txtfile).to.exist;
 
