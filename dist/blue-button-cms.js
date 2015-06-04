@@ -19,7 +19,8 @@ var documentKeyMapper = {
     "other insurance": "payers",
     "preventive services": "plan_of_care",
     "claim summary": "claims",
-    "providers": "providers"
+    "providers": "providers",
+    "organizations": "organizations"
 };
 var bbDocumentModel = {
     "data": {
@@ -36,7 +37,8 @@ var bbDocumentModel = {
         "payers": [],
         "claims": [],
         "plan_of_care": [],
-        "providers": []
+        "providers": [],
+        "organizations": []
     },
     "meta": {
         "type": "cms",
@@ -60,7 +62,6 @@ function cleanUpModel(bbDocumentModel) {
         if (Object.keys(data[x]).length === 0) {
             delete data[x];
         }
-
     }
 }
 
@@ -109,7 +110,8 @@ function convertToBBModel(intermediateObj) {
             "payers": [],
             "claims": [],
             "plan_of_care": [],
-            "providers": []
+            "providers": [],
+            "organizations": []
         },
         "meta": {
             "type": "cms",
@@ -285,21 +287,21 @@ function cleanUpTitle(rawTitleString) {
 }
 
 function processMetaChild(objectString) {
-        var obj = {};
-        var metaValueCode = /(\n{2,}?)([\S\s]+?)(?=\n{2,}?)/gi;
-        var metaValues = objectString.match(metaValueCode);
-        var counter = 0;
-        for (var value = 0; value < metaValues.length; value++) {
-            var cleanedMetaValue = metaValues[value].replace(/\n/g, '');
-            if (cleanedMetaValue.length !== 0) {
-                obj[value.toString()] = cleanedMetaValue;
-            }
-            counter++;
+    var obj = {};
+    var metaValueCode = /(\n{2,}?)([\S\s]+?)(?=\n{2,}?)/gi;
+    var metaValues = objectString.match(metaValueCode);
+    var counter = 0;
+    for (var value = 0; value < metaValues.length; value++) {
+        var cleanedMetaValue = metaValues[value].replace(/\n/g, '');
+        if (cleanedMetaValue.length !== 0) {
+            obj[value.toString()] = cleanedMetaValue;
         }
-        return obj;
+        counter++;
     }
-    /*processes objects with keys and values in each section((i.e. drug 1 of
-    demographics */
+    return obj;
+}
+/*processes objects with keys and values in each section((i.e. drug 1 of
+demographics */
 
 function processSectionChild(objectString) {
     //regular expression that matches key value pairs
@@ -688,7 +690,8 @@ module.exports = {
      'other insurance': require('./sections/insurance.js'),
      'claim summary': require('./sections/claims.js'),
      'preventive services': require('./sections/planofcare.js'),
-     "providers": require('./sections/providers.js')
+     "providers": require('./sections/providers.js'),
+     "organizations": []
  };
 
  var sectionRouter = function (sectionName) {
@@ -157501,16 +157504,16 @@ function getValueType(objValue) {
 }
 
 function writeValue(value, obj, key) {
-        var objValue = obj[key];
-        if (objValue instanceof Array) {
-            objValue.push(value);
-        } else if (typeof (objValue) === 'string') {
-            obj[key] = value;
-        } else if (typeof (objValue) === 'object' && objValue instanceof Array) {
-            obj[key] = value;
-        }
+    var objValue = obj[key];
+    if (objValue instanceof Array) {
+        objValue.push(value);
+    } else if (typeof (objValue) === 'string') {
+        obj[key] = value;
+    } else if (typeof (objValue) === 'object' && objValue instanceof Array) {
+        obj[key] = value;
     }
-    //this function ignores all not avaliable value fields
+}
+//this function ignores all not avaliable value fields
 
 function ignoreValue(value) {
     if (value === null || value === undefined || value.length === 0) {
@@ -157890,58 +157893,58 @@ function processMedicarePlanChild(childObj) {
 }
 
 function processEmployerChild(childObj) {
-        var returnChildObj = {};
-        var typeArray = [];
-        var dateArray = {};
-        var tmpInsurerData = {};
+    var returnChildObj = {};
+    var typeArray = [];
+    var dateArray = {};
+    var tmpInsurerData = {};
 
-        typeArray.push('employer subsidy');
-        for (var key in childObj) {
-            key = key.toLowerCase();
-            var value = childObj[key];
-            var ignoreValue = commonFunctions.getFunction('ignore');
-            if (ignoreValue(value)) {
-                continue;
+    typeArray.push('employer subsidy');
+    for (var key in childObj) {
+        key = key.toLowerCase();
+        var value = childObj[key];
+        var ignoreValue = commonFunctions.getFunction('ignore');
+        if (ignoreValue(value)) {
+            continue;
+        }
+        if (key.indexOf('employer plan') >= 0) {
+
+            if (_.isUndefined(tmpInsurerData.name)) {
+                tmpInsurerData.name = [];
             }
-            if (key.indexOf('employer plan') >= 0) {
+            tmpInsurerData.name.push(value);
 
-                if (_.isUndefined(tmpInsurerData.name)) {
-                    tmpInsurerData.name = [];
-                }
-                tmpInsurerData.name.push(value);
-
-            } else if (key.indexOf('start date') >= 0) {
-                dateArray["low"] = processDate(value);
-            } else if (key.indexOf('end date') >= 0) {
-                dateArray["high"] = processDate(value);
-            }
+        } else if (key.indexOf('start date') >= 0) {
+            dateArray["low"] = processDate(value);
+        } else if (key.indexOf('end date') >= 0) {
+            dateArray["high"] = processDate(value);
         }
-
-        if (_.isUndefined(tmpInsurerData.name)) {
-            tmpInsurerData.name = [];
-        }
-        tmpInsurerData.name.push('EMPLOYER SUBSIDY');
-
-        if (_.isUndefined(returnChildObj.policy)) {
-            returnChildObj.policy = {};
-            returnChildObj.policy.insurance = {};
-            returnChildObj.policy.insurance.performer = {};
-            returnChildObj.policy.insurance.performer.organization = [];
-        }
-
-        returnChildObj.policy.insurance.performer.organization.push(tmpInsurerData);
-
-        if (!_.isEmpty(dateArray)) {
-            if (_.isUndefined(returnChildObj.participant)) {
-                returnChildObj.participant = {};
-            }
-            returnChildObj.participant.date_time = dateArray;
-        }
-
-        return returnChildObj;
-
     }
-    //generic insurance plan, for primary insurance and other insurance
+
+    if (_.isUndefined(tmpInsurerData.name)) {
+        tmpInsurerData.name = [];
+    }
+    tmpInsurerData.name.push('EMPLOYER SUBSIDY');
+
+    if (_.isUndefined(returnChildObj.policy)) {
+        returnChildObj.policy = {};
+        returnChildObj.policy.insurance = {};
+        returnChildObj.policy.insurance.performer = {};
+        returnChildObj.policy.insurance.performer.organization = [];
+    }
+
+    returnChildObj.policy.insurance.performer.organization.push(tmpInsurerData);
+
+    if (!_.isEmpty(dateArray)) {
+        if (_.isUndefined(returnChildObj.participant)) {
+            returnChildObj.participant = {};
+        }
+        returnChildObj.participant.date_time = dateArray;
+    }
+
+    return returnChildObj;
+
+}
+//generic insurance plan, for primary insurance and other insurance
 function processInsuranceChild(childObj) {
     var returnChildObj = {};
     var dateArray = {};
@@ -158751,7 +158754,7 @@ module.exports = parseVitals;
 
 },{"./commonFunctions":9}],19:[function(require,module,exports){
 //! moment.js
-//! version : 2.10.2
+//! version : 2.10.3
 //! authors : Tim Wood, Iskren Chernev, Moment.js contributors
 //! license : MIT
 //! momentjs.com
@@ -158774,28 +158777,12 @@ module.exports = parseVitals;
         hookCallback = callback;
     }
 
-    function defaultParsingFlags() {
-        // We need to deep clone this object.
-        return {
-            empty           : false,
-            unusedTokens    : [],
-            unusedInput     : [],
-            overflow        : -2,
-            charsLeftOver   : 0,
-            nullInput       : false,
-            invalidMonth    : null,
-            invalidFormat   : false,
-            userInvalidated : false,
-            iso             : false
-        };
-    }
-
     function isArray(input) {
         return Object.prototype.toString.call(input) === '[object Array]';
     }
 
     function isDate(input) {
-        return Object.prototype.toString.call(input) === '[object Date]' || input instanceof Date;
+        return input instanceof Date || Object.prototype.toString.call(input) === '[object Date]';
     }
 
     function map(arr, fn) {
@@ -158832,21 +158819,45 @@ module.exports = parseVitals;
         return createLocalOrUTC(input, format, locale, strict, true).utc();
     }
 
+    function defaultParsingFlags() {
+        // We need to deep clone this object.
+        return {
+            empty           : false,
+            unusedTokens    : [],
+            unusedInput     : [],
+            overflow        : -2,
+            charsLeftOver   : 0,
+            nullInput       : false,
+            invalidMonth    : null,
+            invalidFormat   : false,
+            userInvalidated : false,
+            iso             : false
+        };
+    }
+
+    function getParsingFlags(m) {
+        if (m._pf == null) {
+            m._pf = defaultParsingFlags();
+        }
+        return m._pf;
+    }
+
     function valid__isValid(m) {
         if (m._isValid == null) {
+            var flags = getParsingFlags(m);
             m._isValid = !isNaN(m._d.getTime()) &&
-                m._pf.overflow < 0 &&
-                !m._pf.empty &&
-                !m._pf.invalidMonth &&
-                !m._pf.nullInput &&
-                !m._pf.invalidFormat &&
-                !m._pf.userInvalidated;
+                flags.overflow < 0 &&
+                !flags.empty &&
+                !flags.invalidMonth &&
+                !flags.nullInput &&
+                !flags.invalidFormat &&
+                !flags.userInvalidated;
 
             if (m._strict) {
                 m._isValid = m._isValid &&
-                    m._pf.charsLeftOver === 0 &&
-                    m._pf.unusedTokens.length === 0 &&
-                    m._pf.bigHour === undefined;
+                    flags.charsLeftOver === 0 &&
+                    flags.unusedTokens.length === 0 &&
+                    flags.bigHour === undefined;
             }
         }
         return m._isValid;
@@ -158855,10 +158866,10 @@ module.exports = parseVitals;
     function valid__createInvalid (flags) {
         var m = create_utc__createUTC(NaN);
         if (flags != null) {
-            extend(m._pf, flags);
+            extend(getParsingFlags(m), flags);
         }
         else {
-            m._pf.userInvalidated = true;
+            getParsingFlags(m).userInvalidated = true;
         }
 
         return m;
@@ -158894,7 +158905,7 @@ module.exports = parseVitals;
             to._offset = from._offset;
         }
         if (typeof from._pf !== 'undefined') {
-            to._pf = from._pf;
+            to._pf = getParsingFlags(from);
         }
         if (typeof from._locale !== 'undefined') {
             to._locale = from._locale;
@@ -158929,7 +158940,7 @@ module.exports = parseVitals;
     }
 
     function isMoment (obj) {
-        return obj instanceof Moment || (obj != null && hasOwnProp(obj, '_isAMomentObject'));
+        return obj instanceof Moment || (obj != null && obj._isAMomentObject != null);
     }
 
     function toInt(argumentForCoercion) {
@@ -159367,7 +159378,7 @@ module.exports = parseVitals;
         if (month != null) {
             array[MONTH] = month;
         } else {
-            config._pf.invalidMonth = input;
+            getParsingFlags(config).invalidMonth = input;
         }
     });
 
@@ -159451,7 +159462,7 @@ module.exports = parseVitals;
         var overflow;
         var a = m._a;
 
-        if (a && m._pf.overflow === -2) {
+        if (a && getParsingFlags(m).overflow === -2) {
             overflow =
                 a[MONTH]       < 0 || a[MONTH]       > 11  ? MONTH :
                 a[DATE]        < 1 || a[DATE]        > daysInMonth(a[YEAR], a[MONTH]) ? DATE :
@@ -159461,11 +159472,11 @@ module.exports = parseVitals;
                 a[MILLISECOND] < 0 || a[MILLISECOND] > 999 ? MILLISECOND :
                 -1;
 
-            if (m._pf._overflowDayOfYear && (overflow < YEAR || overflow > DATE)) {
+            if (getParsingFlags(m)._overflowDayOfYear && (overflow < YEAR || overflow > DATE)) {
                 overflow = DATE;
             }
 
-            m._pf.overflow = overflow;
+            getParsingFlags(m).overflow = overflow;
         }
 
         return m;
@@ -159478,10 +159489,12 @@ module.exports = parseVitals;
     }
 
     function deprecate(msg, fn) {
-        var firstTime = true;
+        var firstTime = true,
+            msgWithStack = msg + '\n' + (new Error()).stack;
+
         return extend(function () {
             if (firstTime) {
-                warn(msg);
+                warn(msgWithStack);
                 firstTime = false;
             }
             return fn.apply(this, arguments);
@@ -159526,7 +159539,7 @@ module.exports = parseVitals;
             match = from_string__isoRegex.exec(string);
 
         if (match) {
-            config._pf.iso = true;
+            getParsingFlags(config).iso = true;
             for (i = 0, l = isoDates.length; i < l; i++) {
                 if (isoDates[i][1].exec(string)) {
                     // match[5] should be 'T' or undefined
@@ -159806,7 +159819,7 @@ module.exports = parseVitals;
             yearToUse = defaults(config._a[YEAR], currentDate[YEAR]);
 
             if (config._dayOfYear > daysInYear(yearToUse)) {
-                config._pf._overflowDayOfYear = true;
+                getParsingFlags(config)._overflowDayOfYear = true;
             }
 
             date = createUTCDate(yearToUse, 0, config._dayOfYear);
@@ -159902,7 +159915,7 @@ module.exports = parseVitals;
         }
 
         config._a = [];
-        config._pf.empty = true;
+        getParsingFlags(config).empty = true;
 
         // This array is used to make a Date, either with `new Date` or `Date.UTC`
         var string = '' + config._i,
@@ -159918,7 +159931,7 @@ module.exports = parseVitals;
             if (parsedInput) {
                 skipped = string.substr(0, string.indexOf(parsedInput));
                 if (skipped.length > 0) {
-                    config._pf.unusedInput.push(skipped);
+                    getParsingFlags(config).unusedInput.push(skipped);
                 }
                 string = string.slice(string.indexOf(parsedInput) + parsedInput.length);
                 totalParsedInputLength += parsedInput.length;
@@ -159926,27 +159939,29 @@ module.exports = parseVitals;
             // don't parse if it's not a known token
             if (formatTokenFunctions[token]) {
                 if (parsedInput) {
-                    config._pf.empty = false;
+                    getParsingFlags(config).empty = false;
                 }
                 else {
-                    config._pf.unusedTokens.push(token);
+                    getParsingFlags(config).unusedTokens.push(token);
                 }
                 addTimeToArrayFromToken(token, parsedInput, config);
             }
             else if (config._strict && !parsedInput) {
-                config._pf.unusedTokens.push(token);
+                getParsingFlags(config).unusedTokens.push(token);
             }
         }
 
         // add remaining unparsed input length to the string
-        config._pf.charsLeftOver = stringLength - totalParsedInputLength;
+        getParsingFlags(config).charsLeftOver = stringLength - totalParsedInputLength;
         if (string.length > 0) {
-            config._pf.unusedInput.push(string);
+            getParsingFlags(config).unusedInput.push(string);
         }
 
         // clear _12h flag if hour is <= 12
-        if (config._pf.bigHour === true && config._a[HOUR] <= 12) {
-            config._pf.bigHour = undefined;
+        if (getParsingFlags(config).bigHour === true &&
+                config._a[HOUR] <= 12 &&
+                config._a[HOUR] > 0) {
+            getParsingFlags(config).bigHour = undefined;
         }
         // handle meridiem
         config._a[HOUR] = meridiemFixWrap(config._locale, config._a[HOUR], config._meridiem);
@@ -159990,7 +160005,7 @@ module.exports = parseVitals;
             currentScore;
 
         if (config._f.length === 0) {
-            config._pf.invalidFormat = true;
+            getParsingFlags(config).invalidFormat = true;
             config._d = new Date(NaN);
             return;
         }
@@ -160001,7 +160016,6 @@ module.exports = parseVitals;
             if (config._useUTC != null) {
                 tempConfig._useUTC = config._useUTC;
             }
-            tempConfig._pf = defaultParsingFlags();
             tempConfig._f = config._f[i];
             configFromStringAndFormat(tempConfig);
 
@@ -160010,12 +160024,12 @@ module.exports = parseVitals;
             }
 
             // if there is any input that was not parsed add a penalty for that format
-            currentScore += tempConfig._pf.charsLeftOver;
+            currentScore += getParsingFlags(tempConfig).charsLeftOver;
 
             //or tokens
-            currentScore += tempConfig._pf.unusedTokens.length * 10;
+            currentScore += getParsingFlags(tempConfig).unusedTokens.length * 10;
 
-            tempConfig._pf.score = currentScore;
+            getParsingFlags(tempConfig).score = currentScore;
 
             if (scoreToBeat == null || currentScore < scoreToBeat) {
                 scoreToBeat = currentScore;
@@ -160058,6 +160072,8 @@ module.exports = parseVitals;
             configFromStringAndArray(config);
         } else if (format) {
             configFromStringAndFormat(config);
+        } else if (isDate(input)) {
+            config._d = input;
         } else {
             configFromInput(config);
         }
@@ -160110,7 +160126,6 @@ module.exports = parseVitals;
         c._i = input;
         c._f = format;
         c._strict = strict;
-        c._pf = defaultParsingFlags();
 
         return createFromConfig(c);
     }
@@ -160684,11 +160699,25 @@ module.exports = parseVitals;
     }
 
     function from (time, withoutSuffix) {
+        if (!this.isValid()) {
+            return this.localeData().invalidDate();
+        }
         return create__createDuration({to: this, from: time}).locale(this.locale()).humanize(!withoutSuffix);
     }
 
     function fromNow (withoutSuffix) {
         return this.from(local__createLocal(), withoutSuffix);
+    }
+
+    function to (time, withoutSuffix) {
+        if (!this.isValid()) {
+            return this.localeData().invalidDate();
+        }
+        return create__createDuration({from: this, to: time}).locale(this.locale()).humanize(!withoutSuffix);
+    }
+
+    function toNow (withoutSuffix) {
+        return this.to(local__createLocal(), withoutSuffix);
     }
 
     function locale (key) {
@@ -160793,11 +160822,11 @@ module.exports = parseVitals;
     }
 
     function parsingFlags () {
-        return extend({}, this._pf);
+        return extend({}, getParsingFlags(this));
     }
 
     function invalidAt () {
-        return this._pf.overflow;
+        return getParsingFlags(this).overflow;
     }
 
     addFormatToken(0, ['gg', 2], 0, function () {
@@ -160948,7 +160977,7 @@ module.exports = parseVitals;
         if (weekday != null) {
             week.d = weekday;
         } else {
-            config._pf.invalidWeekday = input;
+            getParsingFlags(config).invalidWeekday = input;
         }
     });
 
@@ -161073,7 +161102,7 @@ module.exports = parseVitals;
     });
     addParseToken(['h', 'hh'], function (input, array, config) {
         array[HOUR] = toInt(input);
-        config._pf.bigHour = true;
+        getParsingFlags(config).bigHour = true;
     });
 
     // LOCALES
@@ -161190,6 +161219,8 @@ module.exports = parseVitals;
     momentPrototype__proto.format       = format;
     momentPrototype__proto.from         = from;
     momentPrototype__proto.fromNow      = fromNow;
+    momentPrototype__proto.to           = to;
+    momentPrototype__proto.toNow        = toNow;
     momentPrototype__proto.get          = getSet;
     momentPrototype__proto.invalidAt    = invalidAt;
     momentPrototype__proto.isAfter      = isAfter;
@@ -161378,7 +161409,7 @@ module.exports = parseVitals;
         }
         // Lenient ordinal parsing accepts just a number in addition to
         // number + (possibly) stuff coming from _ordinalParseLenient.
-        this._ordinalParseLenient = new RegExp(this._ordinalParse.source + '|' + /\d{1,2}/.source);
+        this._ordinalParseLenient = new RegExp(this._ordinalParse.source + '|' + (/\d{1,2}/).source);
     }
 
     var prototype__proto = Locale.prototype;
@@ -161595,13 +161626,13 @@ module.exports = parseVitals;
             // handle milliseconds separately because of floating point math errors (issue #1867)
             days = this._days + Math.round(yearsToDays(this._months / 12));
             switch (units) {
-                case 'week'   : return days / 7            + milliseconds / 6048e5;
-                case 'day'    : return days                + milliseconds / 864e5;
-                case 'hour'   : return days * 24           + milliseconds / 36e5;
-                case 'minute' : return days * 24 * 60      + milliseconds / 6e4;
-                case 'second' : return days * 24 * 60 * 60 + milliseconds / 1000;
+                case 'week'   : return days / 7     + milliseconds / 6048e5;
+                case 'day'    : return days         + milliseconds / 864e5;
+                case 'hour'   : return days * 24    + milliseconds / 36e5;
+                case 'minute' : return days * 1440  + milliseconds / 6e4;
+                case 'second' : return days * 86400 + milliseconds / 1000;
                 // Math.floor prevents floating point math errors here
-                case 'millisecond': return Math.floor(days * 24 * 60 * 60 * 1000) + milliseconds;
+                case 'millisecond': return Math.floor(days * 864e5) + milliseconds;
                 default: throw new Error('Unknown unit ' + units);
             }
         }
@@ -161802,7 +161833,7 @@ module.exports = parseVitals;
     // Side effect imports
 
 
-    utils_hooks__hooks.version = '2.10.2';
+    utils_hooks__hooks.version = '2.10.3';
 
     setHookCallback(local__createLocal);
 

@@ -26,4 +26,24 @@ describe('parser.js', function () {
 
         done();
     });
+
+    it('Extra line breaks before sections', function (done) {
+        var txtfile = fs.readFileSync(__dirname + '/fixtures/sample-extra.txt', 'utf-8');
+
+        expect(txtfile).to.exist;
+
+        //convert string into JSON
+        var result = bbcms.parseText(txtfile);
+        expect(result).to.exist;
+
+        var valid = bbm.validator.validateDocumentModel(result);
+
+        if (!valid) {
+            console.log("Errors: \n", JSON.stringify(bbm.validator.getLastError(), null, 4));
+        }
+
+        expect(valid).to.be.true;
+
+        done();
+    });
 });
