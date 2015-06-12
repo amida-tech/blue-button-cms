@@ -222,9 +222,8 @@ function clean(cmsString) {
     if (cmsString.indexOf('\r\n') >= 0) {
         cmsString = cmsString.replace(/\r\n/g, '\n');
         cmsString = cmsString.replace(/\r/g, '\n');
-        //cmsString=cmsString.replace(/\n\n/g, '\n')
     }
-    cmsString = cmsString.replace(/(\n\n\n\n\n)+/g, '\n\n\n\n');
+    cmsString = cmsString.replace(/\n{5,}/g, '\n\n\n\n'); //more than 5 line breaks breaks the parser
     return cmsString;
 }
 
@@ -241,24 +240,23 @@ function separateSections(data) {
 
     /* 2nd regular expression for claims, because the structure of claims is
   unique */
-    var claimsHeaderMatchCode = '(-){4,}(\\n)*Claim Summary(\\n){2,}(-){4,}'; //  /(-){4,}(\\n)*Claim Summary(\\n){2,}(-){4,}([\\S\\s]+Claim[\\S\\s]+)+(?=((-){4,}))/gi
+    var claimsHeaderMatchCode = '(-){4,}(\\n)*Claim Summary(\\n){2,}(-){4,}';
     var claimsBodyMatchCode = '([\\S\\s]+Claim[\\S\\s]+)+';
     var claimsEndMatchCode = '(?=((-){4,}))';
     var claimsMatchCode = claimsHeaderMatchCode +
         claimsBodyMatchCode + claimsEndMatchCode;
 
     //this match code is for all other sections
-    var headerMatchCode = '(-){4,}[\\S\\s]+?(\\n){2,}(-){4,}'; // /(-){4,}[\\S\\s]+?(\\n){2,}(-){4,}[\\S\\s]+?(?=((-){4,}))/ig
+    var headerMatchCode = '(-){4,}[\\S\\s]+?(\\n){2,}(-){4,}';
     var bodyMatchCode = '[\\S\\s]+?';
     var endMatchCode = '(?=((-){4,}))';
     var sectionMatchCode = headerMatchCode + bodyMatchCode + endMatchCode;
 
     /* The regular expression for everything, search globally and
   ignore capitalization */
-    var totalMatchCode = claimsMatchCode + "|" + sectionMatchCode; // /(-){4,}(\\n)*Claim Summary(\\n){2,}(-){4,}([\\S\\s]+Claim[\\S\\s]+)+(?=((-){4,}))|(-){4,}[\\S\\s]+?(\\n){2,}(-){4,}[\\S\\s]+?(?=((-){4,}))/ig
+    var totalMatchCode = claimsMatchCode + "|" + sectionMatchCode;
     var totalRegExp = new RegExp(totalMatchCode, 'gi');
     var matchArray = data.match(totalRegExp);
-    console.log("matchArray: ", matchArray);
     return matchArray;
 }
 
