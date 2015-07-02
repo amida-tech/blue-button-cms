@@ -167,7 +167,7 @@ Type: Environmental
 
 Reaction: Sneezing
 
-Severity: Severe
+Severity: Custom Severe
 
 Diagnosed: Yes
 
@@ -300,6 +300,29 @@ Reading: 110
 Comments: 
 
 
+Vital Statistic Type: Height
+
+Date: 03/20/2012
+
+Time: 12:00 PM
+
+Reading: 180
+
+Comments: Height
+
+
+
+Vital Statistic Type: Weight
+
+Date: 03/20/2012
+
+Time: 12:00 PM
+
+Reading: 80
+
+Comments: Weight
+
+
 
 --------------------------------
 Family Medical History
@@ -354,6 +377,10 @@ Supply: Dialy
 
 Orig Drug Entry: Aspirin
 
+Last Treatment Date: 09/28/1949
+
+Comments: Fasting, hour 1, hour 2, hour 3
+
 
 
 
@@ -374,7 +401,7 @@ Description: DIABETES
 
 Next Eligible Date: 10/1/2011
 
-Last Date of Service: 
+Last Date of Service: 10/1/2015
 
 
 
@@ -490,6 +517,10 @@ Plan Period: 09/01/2011 - current
 Plan Name: A Medicare Plan Plus (HMO)
 
 Marketing Name: HealthCare Payer
+
+Email: test@mail.com
+
+Phone: 13-456-789
 
 Plan Address: 123 Any Road Anytown PA 00003
 
