@@ -78,17 +78,17 @@ function putDataInBBModel(key, parsedSection, bbDocumentModel) {
     if (key in bbDocumentModel) {
         if (bbDocumentModel[key] instanceof Array) {
             if (parsedSection instanceof Array) {
-                for (var x in parsedSection) {
-                    bbDocumentModel[key].push(parsedSection[x]);
-                }
+                parsedSection.forEach(function (x) {
+                    bbDocumentModel[key].push(x);
+                });
             } else {
                 bbDocumentModel[key].push(parsedSection);
             }
         } else if (typeof bbDocumentModel[key] === 'object') {
             if (parsedSection instanceof Array) {
-                for (var y in parsedSection) {
-                    bbDocumentModel[key] = parsedSection[y];
-                }
+                parsedSection.forEach(function (x) {
+                    bbDocumentModel[key] = x;
+                });
             }
         }
     } else if ('data' in bbDocumentModel) {
@@ -138,8 +138,8 @@ function convertToBBModel(intermediateObj) {
     }
 
     /*might want to do some alerting to see which section to process again, based
-  on what kind of information there is left. For instance, allergies has
-  treatments and one of them has a drug in it. */
+     on what kind of information there is left. For instance, allergies has
+     treatments and one of them has a drug in it. */
 
     //for now, just process the allergy section.
 
@@ -156563,7 +156563,7 @@ function processReactions(childObj) {
     var reactionObj = {};
 
     /*on the assumption that cms does use these quantifiers. so far, only severe
-    has been seen in the sample file */
+     has been seen in the sample file */
 
     // from http://schemes.caregraf.info/snomed
     var severityDict = {
@@ -156638,6 +156638,7 @@ function parseAllergyChild(rawChildObj) {
     var dateArray = {};
     var date;
     for (var key in rawChildObj) {
+
         key = key.toLowerCase();
         var value = rawChildObj[key];
         if (key.indexOf('first episode date') >= 0) {
@@ -156676,13 +156677,18 @@ function parseAllergies(sectionObj) {
     //setup templates for common function
 
     /*apply special functions to allergies, take out the fields from original cms
-  parser, store them in an intermediary object.*/
+     parser, store them in an intermediary object.*/
 
     var specialResult = {};
     var result = [];
     var child;
 
     for (var key in sectionObj) {
+
+        if (typeof (sectionObj[key]) === "function") {
+            continue;
+        }
+
         var obj = parseAllergyChild(sectionObj[key]);
         result.push(obj);
     }
@@ -156731,11 +156737,17 @@ function extrapolateDatesFromLines(claimLines, returnChildObj) {
             pointTime = returnChildObj.date_time.point;
         }
     }
+
     for (var x in claimLines) {
+
+        if (typeof (claimLines[x]) === "function") {
+            continue;
+        }
+
         var claimLineObj = claimLines[x];
         if (claimLineObj.date_time) {
             /*if the main claim body has undefined dates, populate it with
-            claim lines date */
+             claim lines date */
             if (claimLineObj.date_time.low && lowTime === undefined) {
                 lowTime = claimLineObj.date_time.low;
             }
@@ -156799,6 +156811,7 @@ function extrapolatePerformersFromClaimLines(claimLines, returnChildObj) {
             uniquePerformerObj[uniqueKey] = claimLines[i].performers[j];
         }
     }
+
     for (i in uniquePerformerObj) {
         uniquePerformerArr.push(uniquePerformerObj[i]);
     }
@@ -156822,11 +156835,17 @@ function processClaimLine(claimLines) {
     var performerObj = {};
     var performerIdentifierArray = [];
     for (var key in claimLines) {
+
+        if (typeof (claimLines[key]) === "function") {
+            continue;
+        }
+
         var value = claimLines[key];
         key = key.toLowerCase();
         ignoreValue = commonFunctions.getFunction('ignore');
         if (ignoreValue(value)) {
             continue;
+
         } else if (key.indexOf('line number') >= 0 && value.length >= 0) {
             claimLineObj.line = value;
         } else if (key.indexOf('date of service from') >= 0 && value.length >= 0) {
@@ -156912,7 +156931,7 @@ function parseClaimChild(childObj) {
     var typeArray = [];
     var diagnosisArray = [];
     /* for now, this isn't utilized because sample file didn't specify how
-    provider names/addresses really look */
+     provider names/addresses really look */
     var performerObj = {};
     var value;
     var claimLineObj;
@@ -156961,6 +156980,11 @@ function parseClaimChild(childObj) {
             var claimLineArray = value;
             var processedClaimLines = [];
             for (var x in claimLineArray) {
+
+                if (typeof (claimLineArray[x]) === "function") {
+                    continue;
+                }
+
                 claimLineObj = processClaimLine(claimLineArray[x]);
                 processedClaimLines.push(claimLineObj);
             }
@@ -157004,12 +157028,13 @@ function parseClaimLineTypeD(childObj) {
     var performerArray = [];
     var claimLineObj = {};
     /*Okay we decided that providers = performers, so I'm parsing both of the
-    pharmacy service provider and the prescriber as performers, with each of them
-    having the type attribute set to either prescriber or provider/pharmacy
-    */
+     pharmacy service provider and the prescriber as performers, with each of them
+     having the type attribute set to either prescriber or provider/pharmacy
+     */
     var pharmacyObj = {};
     var prescriberObj = {};
     for (var key in childObj) {
+
         var value = childObj[key];
         key = key.toLowerCase();
         if (ignoreValue(value)) {
@@ -157060,8 +157085,8 @@ function parseClaimTypeD(childObj) {
     var claimLineArr = childObj.claimLines;
 
     /* so each claim type d doesn't have a main claim type body, so I'm extracting some
-    elements from the claim line and populating the body with information from the claim lines
-    */
+     elements from the claim line and populating the body with information from the claim lines
+     */
     var parsedChild = parseClaimChild(claimLineArr[0]);
     //Next parse all other claim lines
     for (var x = 0; x < claimLineArr.length; x++) {
@@ -157077,16 +157102,21 @@ function parseClaimTypeD(childObj) {
 }
 
 function parseClaims(intObj, sectionType) {
-    //console.log(intObj);
     var result = [];
 
     for (var key in intObj) {
+
+        if (typeof (intObj[key]) === "function") {
+            continue;
+        }
+
         var child = intObj[key];
+
         var parsedChild;
         /*right now, it seems like the text file puts type D medication claims
-        as a claim numbers. So at this point, we HAVE to check if the typeD
-        is in claims and pull it out to the top level of claims, and process
-        typeD sections separately. */
+         as a claim numbers. So at this point, we HAVE to check if the typeD
+         is in claims and pull it out to the top level of claims, and process
+         typeD sections separately. */
         if (isClaimTypeD(child)) {
             parsedChild = parseClaimTypeD(child);
         } else {
@@ -157606,6 +157636,11 @@ function parseDemographics(intObj) {
     };
 
     for (var key in intObj) {
+
+        if (typeof (intObj[key]) === "function") {
+            continue;
+        }
+
         key = key.toLowerCase();
         var value = intObj[key];
         //convert key to bbModel Key
@@ -157723,6 +157758,11 @@ function getDates(child) {
     }
     var boosterNum = 1;
     for (var key in child) {
+
+        if (typeof (child[key]) === "function") {
+            continue;
+        }
+
         if (key.toLowerCase().indexOf('booster') >= 0 && child[key].length > 0) {
             dateObj = parseDate(child[key]);
             var boosterKey = 'booster ' + boosterNum;
@@ -157738,17 +157778,27 @@ function parseImmunizations(sectionObj) {
     //Again, there's no need to use the shared parser, because immunizations is too
     //specific
     /*apply special functions to medications, take out the fields from original cms
-  parser, store them in an intermediary object.*/
+     parser, store them in an intermediary object.*/
     var specialResult = {};
     var specialIndex = 0;
     var result = [];
     //combine the two results together
     for (var x in sectionObj) {
+
+        if (typeof (sectionObj[x]) === "function") {
+            continue;
+        }
+
         var child = sectionObj[x];
         if (Object.keys(child).length > 1) { //get the dates for each object
             var dates = getDates(child);
             var immObj = {};
             for (var dateKey in dates) {
+
+                if (typeof (dates[dateKey]) === "function") {
+                    continue;
+                }
+
                 immObj = getImmunObj(child, dateKey, dates[dateKey]);
                 result.push(immObj);
             }
@@ -157780,7 +157830,6 @@ function processMedicarePlanChild(childObj) {
 
     var tmpInsurerData = {};
     for (var key in childObj) {
-
         key = key.toLowerCase();
         var value = childObj[key];
 
@@ -158055,6 +158104,11 @@ function parseInsurance(intObj, sectionType) {
     var result = [];
     var resultChild;
     for (var x in intObj) {
+
+        if (typeof (intObj[x]) === "function") {
+            continue;
+        }
+
         var child = intObj[x];
         if (sectionType.indexOf('plans') >= 0) {
             resultChild = processMedicarePlanChild(child);
@@ -158247,19 +158301,29 @@ function parseMedications(sectionObj) {
     //setup templates for common function
 
     /*apply special functions to medications, take out the fields from original cms
-  parser, store them in an intermediary object.*/
+     parser, store them in an intermediary object.*/
 
     //console.log(sectionObj);
 
     var result = [];
     var child;
     /*Ultimately, this code is for the sole purpose of rerunning medications
-  code on allergies */
+     code on allergies */
     var productKeys = ['drug name', 'comments'];
     for (var key in sectionObj) {
+
+        if (typeof (sectionObj[key]) === "function") {
+            continue;
+        }
+
         child = sectionObj[key];
         var parsedObj = {};
         for (var x in productKeys) {
+
+            if (typeof (productKeys[x]) === "function") {
+                continue;
+            }
+
             var productKey = productKeys[x];
             if (productKey in child && child[productKey].length > 0) {
                 var resultType = child[productKey].toLowerCase();
@@ -158290,7 +158354,7 @@ function parseMedications(sectionObj) {
                 result.push(parsedObj);
             }
             /*be selective about what sections you want to pass into shared parser
-       you don't want to pass a section with a blank entry for comments. */
+             you don't want to pass a section with a blank entry for comments. */
             if (productKey in child && child[productKey].length <= 0) {
                 delete sectionObj[key];
             }
@@ -158340,6 +158404,11 @@ function parsePlanOfCare(intObj) {
     //setup templates for common function
     var result = [];
     for (var key in intObj) {
+
+        if (typeof (intObj[key]) === "function") {
+            continue;
+        }
+
         var obj = processPlanOfCareChild(intObj[key]);
         result.push(obj);
     }
@@ -158392,6 +158461,11 @@ function parseProblems(intObj) {
     //setup templates for common function
     var result = [];
     for (var key in intObj) {
+
+        if (typeof (intObj[key]) === "function") {
+            continue;
+        }
+
         var obj = processProblemChild(intObj[key]);
         result.push(obj);
     }
@@ -158410,6 +158484,7 @@ function processProviderChild(rawChildObj) {
     var childObj = {};
     var dateArray = {};
     for (var key in rawChildObj) {
+
         var value = rawChildObj[key];
 
         var ignoreValue = commonFunctions.getFunction('ignore');
@@ -158417,7 +158492,7 @@ function processProviderChild(rawChildObj) {
             continue;
         }
         /* need to be able to discern between individuals vs organization
-        health care provider */
+         health care provider */
         else if (key.indexOf('provider name') >= 0) {
             childObj.name = value;
         } else if (key.indexOf('provider address') >= 0) {
@@ -158433,15 +158508,15 @@ function processProviderChild(rawChildObj) {
         else if (key.indexOf('specialty') >= 0) {
 
             /*means that this field is defined, then the provider is a person, so
-            transform the original name field into a person object, populate the
-            cda_name field and delete the generic name field in the top level
-            */
+             transform the original name field into a person object, populate the
+             cda_name field and delete the generic name field in the top level
+             */
             childObj.name = commonFunctions.getFunction('cda_name')(childObj.name);
             childObj.ind_flag = true;
         }
 
         /*this needs to be worked on, because there could be no samples that had
-        this field populated. */
+         this field populated. */
         else if (key.indexOf('medicare provider') >= 0) {
             var organization = {};
             organization.name = value;
@@ -158470,6 +158545,11 @@ function parseProviders(intObj) {
     //setup templates for common function
     var result = [];
     for (var key in intObj) {
+
+        if (typeof (intObj[key]) === "function") {
+            continue;
+        }
+
         var obj = processProviderChild(intObj[key]);
         result.push(obj);
     }
@@ -158508,6 +158588,11 @@ function processGlucoseLevels(childObj) {
     var dateObj = parseDate(dateVal);
     var units = 'mg/dL'; //these are the default units
     for (var x in glucoseLevels) {
+
+        if (typeof (glucoseLevels[x]) === "function") {
+            continue;
+        }
+
         var result = {};
         result.date_time = {
             "point": dateObj
@@ -158540,6 +158625,11 @@ function processCBC(childObj) {
     var dateObj = parseDate(dateVal);
     var unit;
     for (var x in measurements) {
+
+        if (typeof (measurements[x]) === "function") {
+            continue;
+        }
+
         var result = {};
         result.date_time = {
             "point": dateObj
@@ -158563,15 +158653,26 @@ function processResultsChild(rawChild) {
     //apply special function for glucose first, don't loop through
     var resultKey = 'test/lab type';
     if (resultKey in rawChild) {
+
         var resultType = rawChild[resultKey].toLowerCase();
         if (resultType.indexOf('glucose') >= 0) {
             resultObjs = processGlucoseLevels(rawChild);
             for (key in resultObjs) {
+
+                if (typeof (resultObjs[key]) === "function") {
+                    continue;
+                }
+
                 resultArray.push(resultObjs[key]);
             }
         } else if (resultType.indexOf('cbc') >= 0) {
             resultObjs = processCBC(rawChild);
             for (key in resultObjs) {
+
+                if (typeof (resultObjs[key]) === "function") {
+                    continue;
+                }
+
                 resultArray.push(resultObjs[key]);
             }
         }
@@ -158595,13 +158696,18 @@ function processResultsChild(rawChild) {
 function parseResults(sectionObj) {
 
     /*apply special functions to allergies, take out the fields from original cms
-  parser, store them in an intermediary object.*/
+     parser, store them in an intermediary object.*/
 
     var result = [];
     var child;
     var specialIndex = 0;
     //Ultimately, this section will be used to parse results into different sections
     for (var key in sectionObj) {
+
+        if (typeof (sectionObj[key]) === "function") {
+            continue;
+        }
+
         var rawChild = sectionObj[key];
         var obj = processResultsChild(rawChild);
         result.push(obj);
@@ -158626,7 +158732,7 @@ var parseCodedEntry = commonFunctions.getFunction('cda_coded_entry');
 //type of units it is. Also should be given the value as well later.
 function getVitalUnits(vitalType) {
     /*for height and weight, you need some kind of realistic numberical evaluator to
-    determine the weight and height units */
+     determine the weight and height units */
     if (vitalType.toLowerCase() === 'blood pressure') {
         return 'mm[Hg]';
     } else if (vitalType.toLowerCase().indexOf('glucose') >= 0) {
@@ -158715,13 +158821,18 @@ function parseVitals(sectionObj) {
     var specialIndex = 0;
     var result = []; //aka section, results array
     for (var key in sectionObj) {
+
+        if (typeof (sectionObj[key]) === "function") {
+            continue;
+        }
+
         var rawChild = sectionObj[key];
         var childObj = {};
         if (Object.keys(rawChild).length > 1) {
             childObj = parseVitalsChild(rawChild);
             /*This is for blood pressure/values separated with slashes and to process numbers
-            as values. Parse blood pressure(diastolic and systolic) as two objects, copy duplicate
-            */
+             as values. Parse blood pressure(diastolic and systolic) as two objects, copy duplicate
+             */
             if (childObj.value.indexOf('/') >= 0 &&
                 childObj.vital.name.toLowerCase().indexOf('blood pressure') >= 0) {
                 var numbersArray = childObj.value.split('/');
@@ -158746,7 +158857,7 @@ function parseVitals(sectionObj) {
             }
         }
         /*be selective about what sections you want to pass into shared parser
-       you don't want to pass a section with a blank entry for comments. */
+         you don't want to pass a section with a blank entry for comments. */
     }
     //check to make sure that there isn't any bad entries, clean up
     return result;
@@ -181721,7 +181832,6 @@ exports.SlowBuffer = SlowBuffer
 exports.INSPECT_MAX_BYTES = 50
 Buffer.poolSize = 8192 // not used by this implementation
 
-var kMaxLength = 0x3fffffff
 var rootParent = {}
 
 /**
@@ -181758,6 +181868,12 @@ Buffer.TYPED_ARRAY_SUPPORT = (function () {
     return false
   }
 })()
+
+function kMaxLength () {
+  return Buffer.TYPED_ARRAY_SUPPORT
+    ? 0x7fffffff
+    : 0x3fffffff
+}
 
 /**
  * Class: Buffer
@@ -181909,9 +182025,9 @@ function allocate (that, length) {
 function checked (length) {
   // Note: cannot use `length < kMaxLength` here because that fails when
   // length is NaN (which is otherwise coerced to zero.)
-  if (length >= kMaxLength) {
+  if (length >= kMaxLength()) {
     throw new RangeError('Attempt to allocate Buffer larger than maximum ' +
-                         'size: 0x' + kMaxLength.toString(16) + ' bytes')
+                         'size: 0x' + kMaxLength().toString(16) + ' bytes')
   }
   return length | 0
 }
@@ -182003,29 +182119,38 @@ Buffer.concat = function concat (list, length) {
 }
 
 function byteLength (string, encoding) {
-  if (typeof string !== 'string') string = String(string)
+  if (typeof string !== 'string') string = '' + string
 
-  if (string.length === 0) return 0
+  var len = string.length
+  if (len === 0) return 0
 
-  switch (encoding || 'utf8') {
-    case 'ascii':
-    case 'binary':
-    case 'raw':
-      return string.length
-    case 'ucs2':
-    case 'ucs-2':
-    case 'utf16le':
-    case 'utf-16le':
-      return string.length * 2
-    case 'hex':
-      return string.length >>> 1
-    case 'utf8':
-    case 'utf-8':
-      return utf8ToBytes(string).length
-    case 'base64':
-      return base64ToBytes(string).length
-    default:
-      return string.length
+  // Use a for loop to avoid recursion
+  var loweredCase = false
+  for (;;) {
+    switch (encoding) {
+      case 'ascii':
+      case 'binary':
+      // Deprecated
+      case 'raw':
+      case 'raws':
+        return len
+      case 'utf8':
+      case 'utf-8':
+        return utf8ToBytes(string).length
+      case 'ucs2':
+      case 'ucs-2':
+      case 'utf16le':
+      case 'utf-16le':
+        return len * 2
+      case 'hex':
+        return len >>> 1
+      case 'base64':
+        return base64ToBytes(string).length
+      default:
+        if (loweredCase) return utf8ToBytes(string).length // assume utf8
+        encoding = ('' + encoding).toLowerCase()
+        loweredCase = true
+    }
   }
 }
 Buffer.byteLength = byteLength
@@ -182034,8 +182159,7 @@ Buffer.byteLength = byteLength
 Buffer.prototype.length = undefined
 Buffer.prototype.parent = undefined
 
-// toString(encoding, start=0, end=buffer.length)
-Buffer.prototype.toString = function toString (encoding, start, end) {
+function slowToString (encoding, start, end) {
   var loweredCase = false
 
   start = start | 0
@@ -182076,6 +182200,13 @@ Buffer.prototype.toString = function toString (encoding, start, end) {
         loweredCase = true
     }
   }
+}
+
+Buffer.prototype.toString = function toString () {
+  var length = this.length | 0
+  if (length === 0) return ''
+  if (arguments.length === 0) return utf8Slice(this, 0, length)
+  return slowToString.apply(this, arguments)
 }
 
 Buffer.prototype.equals = function equals (b) {
@@ -188100,7 +188231,7 @@ var bbm = require('blue-button-model');
 
 describe('parser.js', function () {
     it('CMS parser/model validation', function (done) {
-        var txtfile = "--------------------------------\nMYMEDICARE.GOV PERSONAL HEALTH INFORMATION\n\n--------------------------------\n**********CONFIDENTIAL***********\n\nProduced by the Blue Button (v2.0)\n\n03/16/2013 5:10 AM\n\n\n\n\n--------------------------------\nDemographic\n\n--------------------------------\n\nSource: MyMedicare.gov\n\n\n\nName: JOHN DOE\n\nDate of Birth: 01/01/1910\n\nAddress Line 1: 123 ANY ROAD\n\nAddress Line 2: \n\nCity: ANYTOWN\n\nState: VA\n\nZip: 00001\n\nPhone Number: 123-456-7890\n\nEmail: JOHNDOE@example.com\n\nPart A Effective Date: 01/01/2012\n\nPart B Effective Date: 01/01/2012\n\n\n\n--------------------------------\nEmergency Contact\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nContact Name: JANE DOE\n\nAddress Type:Home\n\nAddress Line 1: 123 AnyWhere St\n\nAddress Line 2: \n\nCity: AnyWhere\n\nState: DC\n\nZip: 00002-1111\n\nRelationship: Other\n\nHome Phone: 123-456-7890\n\nWork Phone: 000-001-0001\n\nMobile Phone: 000-001-0002\n\nEmail Address: JANEDOE@example.com\n\n\n\nContact Name: STEVE DOE\n\nAddress Type:\n\nAddress Line 1: 123 AnyWhere Rd\n\nAddress Line 2: \n\nCity: AnyWhere\n\nState: VA\n\nZip: 00001\n\nRelationship: Other\n\nHome Phone: 123-456-7890\n\nWork Phone: 000-001-0001\n\nMobile Phone: 000-001-0002\n\nEmail Address: STEVEDOE@example.com\n\n\n\n--------------------------------\nSelf Reported Medical Conditions\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nCondition Name: Arthritis\n\nMedical Condition Start Date: 08/09/2005\n\nMedical Condition End Date: 02/28/2011\n\n\n\nCondition Name: Asthma\n\nMedical Condition Start Date: 01/25/2008\n\nMedical Condition End Date: 01/25/2010\n\n\n\n--------------------------------\nSelf Reported Allergies\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nAllergy Name: Antibotic\n\nType: Drugs\n\nReaction: Vomiting\n\nSeverity: Severe\n\nDiagnosed: Yes\n\nTreatment: Allergy Shots\n\nFirst Episode Date: 01/08/1926\n\nLast Episode Date: 03/13/1955\n\nLast Treatment Date: 09/28/1949\n\nComments: Erythromycin \n\n\n\nAllergy Name: Grasses\n\nType: Environmental\n\nReaction: Sneezing\n\nSeverity: Severe\n\nDiagnosed: Yes\n\nTreatment: Avoidance\n\nFirst Episode Date: 05/13/1973\n\nLast Episode Date: 07/20/1996\n\nLast Treatment Date: 09/27/2008\n\nComments: \n\n\n\n--------------------------------\nSelf Reported Implantable Device\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nDevice Name: Artificial Eye Lenses\n\nDate Implanted: 1/27/1942\n\n\n\n--------------------------------\nSelf Reported Immunizations\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nImmunization Name: Varicella/Chicken Pox\n\nDate Administered:04/21/2002\n\nMethod: Nasal Spray(mist)\n\nWere you vaccinated in the US: \n\nComments: congestion\n\nBooster 1 Date: 02/02/1990\n\nBooster 2 Date: \n\nBooster 3 Date: \n\n\n\nImmunization Name: typhoid\n\nDate Administered:01/02/2009\n\nMethod: Injection\n\nWere you vaccinated in the US: \n\nComments: \n\nBooster 1 Date: \n\nBooster 2 Date: \n\nBooster 3 Date: \n\n\n\n--------------------------------\nSelf Reported Labs and Tests\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nTest/Lab Type: Glucose Level\nDate Taken: 03/21/2008\n\nAdministered by: AnyLab\n\nRequesting Doctor: Dr. Smith\n\nReason Test/Lab Requested: Ongoing elevated glucose\n\nResults: 135, 170, 150, 120\n\nComments: Fasting, hour 1, hour 2, hour 3\n\n\n\n--------------------------------\nSelf Reported Vital Statistics\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nVital Statistic Type: Blood Pressure\n\nDate: 07/22/2011\n\nTime: 3:00 PM\n\nReading: 120/80\n\nComments: \n\n\n\nVital Statistic Type: Glucose\n\nDate: 03/20/2012\n\nTime: 12:00 PM\n\nReading: 110\n\nComments: \n\n\n\n--------------------------------\nFamily Medical History\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nFamily Member: Brother\n\nType: \n\nDOB:1/10/1915\n\nDOD: \n\nAge: \n\nType: Allergy\n\nDescription: Antiarrythmia\n\nDescription: Antibiotic\n\nDescription: Anticonvulsants\n\nType: Condition\n\nDescription: Allergies\n\nDescription: Alzheimer's Disease\n\nDescription: Angina (Heart Pain)\n\nDescription: Cataracts\n\n\n--------------------------------\nDrugs\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nDrug Name: Aspirin\n\nSupply: Dialy\n\nOrig Drug Entry: Aspirin\n\n\n\n--------------------------------\nPreventive Services\n\n--------------------------------\n\nSource: MyMedicare.gov\n\n\n\nDescription: DIABETES\n\nNext Eligible Date: 10/1/2011\n\nLast Date of Service: \n\n\n\nDescription: PAP TEST DR\n\nNext Eligible Date: 10/1/2011\n\nLast Date of Service: \n\n\n\nDescription: ABDOMINAL AORTIC ANEURYSM\n\nNext Eligible Date: 7/1/2012\n\nLast Date of Service: \n\n\n\nDescription: ANNUAL WELLNESS VISIT\n\nNext Eligible Date: 1/1/2013\n\nLast Date of Service: \n\n\n\nDescription: DEPRESSION SCREENING\n\nNext Eligible Date: 10/14/2012\n\nLast Date of Service: \n\n\n\n--------------------------------\nProviders\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nProvider Name: ANY CARE\n\nProvider Address: 123 Any Rd, Anywhere, MD 99999\n\nType: NHC\n\nSpecialty: \n\nMedicare Provider: Not Available\n\n\n\nProvider Name: ANY HOSPITAL1\n\nProvider Address: 123 Drive, Anywhere, VA 00001\n\nType: HOS\n\nSpecialty: \n\nMedicare Provider: Not Available\n\nProvider Name: Jane Doe\n\nProvider Address: 123 Road, Anywhere, VA 00001\n\nType: PHY\n\nSpecialty: Other\n\nMedicare Provider: Not Available\n\n\n\n--------------------------------\nPharmacies\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nPharmacy Name: PHARMACY, EAST STREET ANYWHERE, DC 00002\n\nPharmacy Phone: 000-000-0001\n\n\n\nPharmacy Name: ANY PHARMACY, WEST STREET ANYWHERE, VA 00001\n\nPharmacy Phone: 000-000-0002\n\n\n\n--------------------------------\nPlans\n\n--------------------------------\n\nSource: MyMedicare.gov\n\n\n\nContract ID/Plan ID: H9999/9999\n\nPlan Period: 09/01/2011 - current\n\nPlan Name: A Medicare Plan Plus (HMO)\n\nMarketing Name: HealthCare Payer\n\nPlan Address: 123 Any Road Anytown PA 00003\n\nPlan Type: 3 - Coordinated Care Plan (HMO, PPO, PSO, SNP)\n\n\n\nContract ID/Plan ID: S9999/000\n\nPlan Period: 01/01/2010 - current\n\nPlan Name: A Medicare Rx Plan (PDP)\n\nMarketing Name: Another HealthCare Payer\n\nPlan Address: 123 Any Road Anytown PA 00003\n\nPlan Type: 11 - Medicare Prescription Drug Plan\n\n\n\n--------------------------------\nEmployer Subsidy\n\n--------------------------------\n\nSource: MyMedicare.gov\n\n\nEmployer Plan: STATE HEALTH BENEFITS PROGRAM\n\nEmployer Subsidy Start Date: 01/01/2011\n\nEmployer Subsidy End Date: 12/31/2011\n\n\n--------------------------------\nPrimary Insurance\n\n--------------------------------\n\nSource: MyMedicare.gov\n\n\n\nMSP Type: End stage Renal Disease (ESRD)\n\nPolicy Number: 1234567890\n\nInsurer Name: Insurer1\n\nInsurer Address: PO BOX 0000 Anytown, CO 00002-0000\n\nEffective Date: 01/01/2011\n\nTermination Date: 09/30/2011\n\n\n\nMSP Type: End stage Renal Disease (ESRD)\n\nPolicy Number: 12345678901\n\nInsurer Name: Insurer2\n\nInsurer Address: 0000 Any ROAD ANYWHERE, VA 00000-0000\n\nEffective Date: 01/01/2010\n\nTermination Date: 12/31/2010\n\n\n\n--------------------------------\nOther Insurance\n\n--------------------------------\n\nSource: MyMedicare.gov\n\n\n\nMSP Type: \n\nPolicy Number: 00001\n\nInsurer Name: Insurer\n\nInsurer Address: 00 Address STREET ANYWHERE, PA 00000\n\nEffective Date: 10/01/1984\n\nTermination Date: 11/30/2008\n\n\n\n--------------------------------\nClaim Summary\n\n--------------------------------\n\nSource: MyMedicare.gov\n\n\n\nClaim Number: 1234567890000\n\nProvider: No Information Available \nProvider Billing Address:    \n\nService Start Date: 10/18/2012\n\nService End Date: \n\nAmount Charged: $60.00\n\nMedicare Approved: $34.00\n\nProvider Paid: $27.20\n\nYou May be Billed: $6.80\n\nClaim Type: PartB\n\nDiagnosis Code 1: 3534\nDiagnosis Code 2: 7393\nDiagnosis Code 3: 7392\nDiagnosis Code 4: 3533 \n\n--------------------------------\nClaim Lines for Claim Number: 1234567890000\n\n--------------------------------\n\n\n\nLine number:  1\n\nDate of Service From:  10/18/2012\n\nDate of Service To:  10/18/2012\n\nProcedure Code/Description:  98941 - Chiropractic Manipulative Treatment (Cmt); Spinal, Three To Four Regions\n\nModifier 1/Description:  AT - Acute Treatment (This Modifier Should Be Used When Reporting Service 98940, 98941, 98942)\n\nModifier 2/Description:  \n\nModifier 3/Description:  \n\nModifier 4/Description:  \n\nQuantity Billed/Units:  1\n\nSubmitted Amount/Charges:  $60.00\n\nAllowed Amount:  $34.00\n\nNon-Covered:  $26.00\n\nPlace of Service/Description:  11 - Office\n\nType of Service/Description:  1 - Medical Care\n\nRendering Provider No:  0000001\n\nRendering Provider NPI:  123456789\n\n\n\n--------------------------------\n\n\n\n--------------------------------\n\n\n\nClaim Number: 12345678900000VAA\n\nProvider: No Information Available\n \nProvider Billing Address:    \n\nService Start Date: 09/22/2012\n\nService End Date: \n\nAmount Charged: $504.80\n\nMedicare Approved: $504.80\n\nProvider Paid: $126.31\n\nYou May be Billed: $38.84\n\nClaim Type: Outpatient\n\nDiagnosis Code 1: 56400\nDiagnosis Code 2: 7245\nDiagnosis Code 3: V1588\n\n--------------------------------\nClaim Lines for Claim Number: 12345678900000VAA\n\n--------------------------------\n\n\n\nLine number:  1\n\nDate of Service From:  09/22/2012\n\nRevenue Code/Description: 0250 - General Classification PHARMACY\n\nProcedure Code/Description:  \n\nModifier 1/Description:  \n\nModifier 2/Description:  \n\nModifier 3/Description:  \n\nModifier 4/Description:  \n\nQuantity Billed/Units:  1\n\nSubmitted Amount/Charges:  $14.30\n\nAllowed Amount:  $14.30\n\nNon-Covered:  $0.00\n\n\n\nLine number:  2\n\nDate of Service From:  09/22/2012\n\nRevenue Code/Description: 0320 - General Classification DX X-RAY\n\nProcedure Code/Description:  74020 - Radiologic Examination, Abdomen; Complete, Including Decubitus And/Or Erect Views\n\nModifier 1/Description:  \n\nModifier 2/Description:  \n\nModifier 3/Description:  \n\nModifier 4/Description:  \n\nQuantity Billed/Units:  1\n\nSubmitted Amount/Charges:  $175.50\n\nAllowed Amount:  $175.50\n\nNon-Covered:  $0.00\n\n\n\nLine number:  3\n\nDate of Service From:  09/22/2012\n\nRevenue Code/Description: 0450 - General Classification EMERG ROOM\n\nProcedure Code/Description:  99283 - Emergency Department Visit For The Evaluation And Management Of A Patient, Which Requires Th\n\nModifier 1/Description:  25 - Significant, Separately Identifiable Evaluation And Management Service By The Same Physician On\n\nModifier 2/Description:  \n\nModifier 3/Description:  \n\nModifier 4/Description:  \n\nQuantity Billed/Units:  1\n\nSubmitted Amount/Charges:  $315.00\n\nAllowed Amount:  $315.00\n\nNon-Covered:  $0.00\n\n\n\nLine number:  4\n\nDate of Service From:  \n\nRevenue Code/Description: 0001 - Total Charges\n\nProcedure Code/Description:  \n\nModifier 1/Description:  \n\nModifier 2/Description:  \n\nModifier 3/Description:  \n\nModifier 4/Description:  \n\nQuantity Billed/Units:  0\n\nSubmitted Amount/Charges:  $504.80\n\nAllowed Amount:  $504.80\n\nNon-Covered:  $0.00\n\nClaim Number: 1234567890123\n\nProvider: No Information Available\n\nProvider Billing Address:    \n\nService Start Date: 12/01/2012\n\nService End Date: \n\nAmount Charged: * Not Available *\n\nMedicare Approved: * Not Available *\n\nProvider Paid: * Not Available *\n\nYou May be Billed: * Not Available *\n\nClaim Type: PartB\n\nDiagnosis Code 1: 7392\nDiagnosis Code 2: 7241\nDiagnosis Code 3: 7393\nDiagnosis Code 4: 7391\n\n--------------------------------\nClaim Lines for Claim Number: 1234567890123\n\n--------------------------------\n\n\n\nLine number:  1\n\nDate of Service From:  12/01/2012\n\nDate of Service To:  12/01/2012\n\nProcedure Code/Description:  98941 - Chiropractic Manipulative Treatment, 3 To 4 Spinal Regions\n\nModifier 1/Description:  GA - Waiver Of Liability Statement Issued As Required By Payer Policy, Individual Case\n\nModifier 2/Description:  \n\nModifier 3/Description:  \n\nModifier 4/Description:  \n\nQuantity Billed/Units:  1\n\nSubmitted Amount/Charges:  * Not Available *\n\nAllowed Amount:  * Not Available *\n\nNon-Covered:  * Not Available *\n\nPlace of Service/Description:  11 - Office\n\nType of Service/Description:  1 - Medical Care\n\nRendering Provider No:  123456\n\nRendering Provider NPI:  123456789\n\n\n\nLine number:  2\n\nDate of Service From:  12/01/2012\n\nDate of Service To:  12/01/2012\n\nProcedure Code/Description:  G0283 - Electrical Stimulation (Unattended), To One Or More Areas For Indication(S) Other Than Wound\n\nModifier 1/Description:  GY - Item Or Service Statutorily Excluded, Does Not Meet The Definition Of Any Medicare Benefit Or,\n\nModifier 2/Description:  \n\nModifier 3/Description:  \n\nModifier 4/Description:  \n\nQuantity Billed/Units:  1\n\nSubmitted Amount/Charges:  * Not Available *\n\nAllowed Amount:  * Not Available *\n\nNon-Covered:  * Not Available *\n\nPlace of Service/Description:  11 - Office\n\nType of Service/Description:  1 - Medical Care\n\nRendering Provider No:  123456\n\nRendering Provider NPI:  123456789\n\n\n\n--------------------------------\nClaim Lines for Claim Number: 123456789012\n\n--------------------------------\n\n\n\nClaim Type: Part D\n\nClaim Number: 123456789012\n\nClaim Service Date: 11/17/2011\n\nPharmacy / Service Provider: 123456789\n\nPharmacy Name: PHARMACY2 #00000\n\nDrug Code: 00093013505\n\nDrug Name: CARVEDILOL\n\nFill Number: 0\n\nDays' Supply: 30\n\nPrescriber Identifer: 123456789\n\nPrescriber Name: Jane Doe\n\n\n\n--------------------------------\nClaim Lines for Claim Number: 123456789011\n\n--------------------------------\n\n\n\nClaim Type: Part D\n\nClaim Number: 123456789011\n\nClaim Service Date: 11/23/2011\n\nPharmacy / Service Provider: 1234567890\n\nPharmacy Name: PHARMACY3 #00000\n\nDrug Code: 00781223310\n\nDrug Name: OMEPRAZOLE\n\nFill Number: 4\n\nDays' Supply: 30\n\nPrescriber Identifer: 123456789\n\nPrescriber Name: Jane Doe\n\n\n\n--------------------------------\n\n\n\n";
+        var txtfile = "--------------------------------\r\nMYMEDICARE.GOV PERSONAL HEALTH INFORMATION\r\n\r\n--------------------------------\r\n**********CONFIDENTIAL***********\r\n\r\nProduced by the Blue Button (v2.0)\r\n\r\n03/16/2013 5:10 AM\r\n\r\n\r\n\r\n\r\n--------------------------------\r\nDemographic\r\n\r\n--------------------------------\r\n\r\nSource: MyMedicare.gov\r\n\r\n\r\n\r\nName: JOHN DOE\r\n\r\nDate of Birth: 01/01/1910\r\n\r\nAddress Line 1: 123 ANY ROAD\r\n\r\nAddress Line 2: \r\n\r\nCity: ANYTOWN\r\n\r\nState: VA\r\n\r\nZip: 00001\r\n\r\nPhone Number: 123-456-7890\r\n\r\nEmail: JOHNDOE@example.com\r\n\r\nPart A Effective Date: 01/01/2012\r\n\r\nPart B Effective Date: 01/01/2012\r\n\r\n\r\n\r\n--------------------------------\r\nEmergency Contact\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nContact Name: JANE DOE\r\n\r\nAddress Type:Home\r\n\r\nAddress Line 1: 123 AnyWhere St\r\n\r\nAddress Line 2: \r\n\r\nCity: AnyWhere\r\n\r\nState: DC\r\n\r\nZip: 00002-1111\r\n\r\nRelationship: Other\r\n\r\nHome Phone: 123-456-7890\r\n\r\nWork Phone: 000-001-0001\r\n\r\nMobile Phone: 000-001-0002\r\n\r\nEmail Address: JANEDOE@example.com\r\n\r\n\r\n\r\nContact Name: STEVE DOE\r\n\r\nAddress Type:\r\n\r\nAddress Line 1: 123 AnyWhere Rd\r\n\r\nAddress Line 2: \r\n\r\nCity: AnyWhere\r\n\r\nState: VA\r\n\r\nZip: 00001\r\n\r\nRelationship: Other\r\n\r\nHome Phone: 123-456-7890\r\n\r\nWork Phone: 000-001-0001\r\n\r\nMobile Phone: 000-001-0002\r\n\r\nEmail Address: STEVEDOE@example.com\r\n\r\n\r\n\r\n--------------------------------\r\nSelf Reported Medical Conditions\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nCondition Name: Arthritis\r\n\r\nMedical Condition Start Date: 08/09/2005\r\n\r\nMedical Condition End Date: 02/28/2011\r\n\r\n\r\n\r\nCondition Name: Asthma\r\n\r\nMedical Condition Start Date: 01/25/2008\r\n\r\nMedical Condition End Date: 01/25/2010\r\n\r\n\r\n\r\n--------------------------------\r\nSelf Reported Allergies\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nAllergy Name: Antibotic\r\n\r\nType: Drugs\r\n\r\nReaction: Vomiting\r\n\r\nSeverity: Severe\r\n\r\nDiagnosed: Yes\r\n\r\nTreatment: Allergy Shots\r\n\r\nFirst Episode Date: 01/08/1926\r\n\r\nLast Episode Date: 03/13/1955\r\n\r\nLast Treatment Date: 09/28/1949\r\n\r\nComments: Erythromycin \r\n\r\n\r\n\r\nAllergy Name: Grasses\r\n\r\nType: Environmental\r\n\r\nReaction: Sneezing\r\n\r\nSeverity: Severe\r\n\r\nDiagnosed: Yes\r\n\r\nTreatment: Avoidance\r\n\r\nFirst Episode Date: 05/13/1973\r\n\r\nLast Episode Date: 07/20/1996\r\n\r\nLast Treatment Date: 09/27/2008\r\n\r\nComments: \r\n\r\n\r\n\r\n--------------------------------\r\nSelf Reported Implantable Device\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nDevice Name: Artificial Eye Lenses\r\n\r\nDate Implanted: 1/27/1942\r\n\r\n\r\n\r\n--------------------------------\r\nSelf Reported Immunizations\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nImmunization Name: Varicella/Chicken Pox\r\n\r\nDate Administered:04/21/2002\r\n\r\nMethod: Nasal Spray(mist)\r\n\r\nWere you vaccinated in the US: \r\n\r\nComments: congestion\r\n\r\nBooster 1 Date: 02/02/1990\r\n\r\nBooster 2 Date: \r\n\r\nBooster 3 Date: \r\n\r\n\r\n\r\nImmunization Name: typhoid\r\n\r\nDate Administered:01/02/2009\r\n\r\nMethod: Injection\r\n\r\nWere you vaccinated in the US: \r\n\r\nComments: \r\n\r\nBooster 1 Date: \r\n\r\nBooster 2 Date: \r\n\r\nBooster 3 Date: \r\n\r\n\r\n\r\n--------------------------------\r\nSelf Reported Labs and Tests\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nTest/Lab Type: Glucose Level\r\nDate Taken: 03/21/2008\r\n\r\nAdministered by: AnyLab\r\n\r\nRequesting Doctor: Dr. Smith\r\n\r\nReason Test/Lab Requested: Ongoing elevated glucose\r\n\r\nResults: 135, 170, 150, 120\r\n\r\nComments: Fasting, hour 1, hour 2, hour 3\r\n\r\n\r\n\r\n--------------------------------\r\nSelf Reported Vital Statistics\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nVital Statistic Type: Blood Pressure\r\n\r\nDate: 07/22/2011\r\n\r\nTime: 3:00 PM\r\n\r\nReading: 120/80\r\n\r\nComments: \r\n\r\n\r\n\r\nVital Statistic Type: Glucose\r\n\r\nDate: 03/20/2012\r\n\r\nTime: 12:00 PM\r\n\r\nReading: 110\r\n\r\nComments: \r\n\r\n\r\n\r\n--------------------------------\r\nFamily Medical History\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nFamily Member: Brother\r\n\r\nType: \r\n\r\nDOB:1/10/1915\r\n\r\nDOD: \r\n\r\nAge: \r\n\r\nType: Allergy\r\n\r\nDescription: Antiarrythmia\r\n\r\nDescription: Antibiotic\r\n\r\nDescription: Anticonvulsants\r\n\r\nType: Condition\r\n\r\nDescription: Allergies\r\n\r\nDescription: Alzheimer's Disease\r\n\r\nDescription: Angina (Heart Pain)\r\n\r\nDescription: Cataracts\r\n\r\n\r\n--------------------------------\r\nDrugs\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nDrug Name: Aspirin\r\n\r\nSupply: Dialy\r\n\r\nOrig Drug Entry: Aspirin\r\n\r\n\r\n\r\n--------------------------------\r\nPreventive Services\r\n\r\n--------------------------------\r\n\r\nSource: MyMedicare.gov\r\n\r\n\r\n\r\nDescription: DIABETES\r\n\r\nNext Eligible Date: 10/1/2011\r\n\r\nLast Date of Service: \r\n\r\n\r\n\r\nDescription: PAP TEST DR\r\n\r\nNext Eligible Date: 10/1/2011\r\n\r\nLast Date of Service: \r\n\r\n\r\n\r\nDescription: ABDOMINAL AORTIC ANEURYSM\r\n\r\nNext Eligible Date: 7/1/2012\r\n\r\nLast Date of Service: \r\n\r\n\r\n\r\nDescription: ANNUAL WELLNESS VISIT\r\n\r\nNext Eligible Date: 1/1/2013\r\n\r\nLast Date of Service: \r\n\r\n\r\n\r\nDescription: DEPRESSION SCREENING\r\n\r\nNext Eligible Date: 10/14/2012\r\n\r\nLast Date of Service: \r\n\r\n\r\n\r\n--------------------------------\r\nProviders\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nProvider Name: ANY CARE\r\n\r\nProvider Address: 123 Any Rd, Anywhere, MD 99999\r\n\r\nType: NHC\r\n\r\nSpecialty: \r\n\r\nMedicare Provider: Not Available\r\n\r\n\r\n\r\nProvider Name: ANY HOSPITAL1\r\n\r\nProvider Address: 123 Drive, Anywhere, VA 00001\r\n\r\nType: HOS\r\n\r\nSpecialty: \r\n\r\nMedicare Provider: Not Available\r\n\r\nProvider Name: Jane Doe\r\n\r\nProvider Address: 123 Road, Anywhere, VA 00001\r\n\r\nType: PHY\r\n\r\nSpecialty: Other\r\n\r\nMedicare Provider: Not Available\r\n\r\n\r\n\r\n--------------------------------\r\nPharmacies\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nPharmacy Name: PHARMACY, EAST STREET ANYWHERE, DC 00002\r\n\r\nPharmacy Phone: 000-000-0001\r\n\r\n\r\n\r\nPharmacy Name: ANY PHARMACY, WEST STREET ANYWHERE, VA 00001\r\n\r\nPharmacy Phone: 000-000-0002\r\n\r\n\r\n\r\n--------------------------------\r\nPlans\r\n\r\n--------------------------------\r\n\r\nSource: MyMedicare.gov\r\n\r\n\r\n\r\nContract ID/Plan ID: H9999/9999\r\n\r\nPlan Period: 09/01/2011 - current\r\n\r\nPlan Name: A Medicare Plan Plus (HMO)\r\n\r\nMarketing Name: HealthCare Payer\r\n\r\nPlan Address: 123 Any Road Anytown PA 00003\r\n\r\nPlan Type: 3 - Coordinated Care Plan (HMO, PPO, PSO, SNP)\r\n\r\n\r\n\r\nContract ID/Plan ID: S9999/000\r\n\r\nPlan Period: 01/01/2010 - current\r\n\r\nPlan Name: A Medicare Rx Plan (PDP)\r\n\r\nMarketing Name: Another HealthCare Payer\r\n\r\nPlan Address: 123 Any Road Anytown PA 00003\r\n\r\nPlan Type: 11 - Medicare Prescription Drug Plan\r\n\r\n\r\n\r\n--------------------------------\r\nEmployer Subsidy\r\n\r\n--------------------------------\r\n\r\nSource: MyMedicare.gov\r\n\r\n\r\nEmployer Plan: STATE HEALTH BENEFITS PROGRAM\r\n\r\nEmployer Subsidy Start Date: 01/01/2011\r\n\r\nEmployer Subsidy End Date: 12/31/2011\r\n\r\n\r\n--------------------------------\r\nPrimary Insurance\r\n\r\n--------------------------------\r\n\r\nSource: MyMedicare.gov\r\n\r\n\r\n\r\nMSP Type: End stage Renal Disease (ESRD)\r\n\r\nPolicy Number: 1234567890\r\n\r\nInsurer Name: Insurer1\r\n\r\nInsurer Address: PO BOX 0000 Anytown, CO 00002-0000\r\n\r\nEffective Date: 01/01/2011\r\n\r\nTermination Date: 09/30/2011\r\n\r\n\r\n\r\nMSP Type: End stage Renal Disease (ESRD)\r\n\r\nPolicy Number: 12345678901\r\n\r\nInsurer Name: Insurer2\r\n\r\nInsurer Address: 0000 Any ROAD ANYWHERE, VA 00000-0000\r\n\r\nEffective Date: 01/01/2010\r\n\r\nTermination Date: 12/31/2010\r\n\r\n\r\n\r\n--------------------------------\r\nOther Insurance\r\n\r\n--------------------------------\r\n\r\nSource: MyMedicare.gov\r\n\r\n\r\n\r\nMSP Type: \r\n\r\nPolicy Number: 00001\r\n\r\nInsurer Name: Insurer\r\n\r\nInsurer Address: 00 Address STREET ANYWHERE, PA 00000\r\n\r\nEffective Date: 10/01/1984\r\n\r\nTermination Date: 11/30/2008\r\n\r\n\r\n\r\n--------------------------------\r\nClaim Summary\r\n\r\n--------------------------------\r\n\r\nSource: MyMedicare.gov\r\n\r\n\r\n\r\nClaim Number: 1234567890000\r\n\r\nProvider: No Information Available \r\nProvider Billing Address:    \r\n\r\nService Start Date: 10/18/2012\r\n\r\nService End Date: \r\n\r\nAmount Charged: $60.00\r\n\r\nMedicare Approved: $34.00\r\n\r\nProvider Paid: $27.20\r\n\r\nYou May be Billed: $6.80\r\n\r\nClaim Type: PartB\r\n\r\nDiagnosis Code 1: 3534\r\nDiagnosis Code 2: 7393\r\nDiagnosis Code 3: 7392\r\nDiagnosis Code 4: 3533 \r\n\r\n--------------------------------\r\nClaim Lines for Claim Number: 1234567890000\r\n\r\n--------------------------------\r\n\r\n\r\n\r\nLine number:  1\r\n\r\nDate of Service From:  10/18/2012\r\n\r\nDate of Service To:  10/18/2012\r\n\r\nProcedure Code/Description:  98941 - Chiropractic Manipulative Treatment (Cmt); Spinal, Three To Four Regions\r\n\r\nModifier 1/Description:  AT - Acute Treatment (This Modifier Should Be Used When Reporting Service 98940, 98941, 98942)\r\n\r\nModifier 2/Description:  \r\n\r\nModifier 3/Description:  \r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  1\r\n\r\nSubmitted Amount/Charges:  $60.00\r\n\r\nAllowed Amount:  $34.00\r\n\r\nNon-Covered:  $26.00\r\n\r\nPlace of Service/Description:  11 - Office\r\n\r\nType of Service/Description:  1 - Medical Care\r\n\r\nRendering Provider No:  0000001\r\n\r\nRendering Provider NPI:  123456789\r\n\r\n\r\n\r\n--------------------------------\r\n\r\n\r\n\r\n--------------------------------\r\n\r\n\r\n\r\nClaim Number: 12345678900000VAA\r\n\r\nProvider: No Information Available\r\n \r\nProvider Billing Address:    \r\n\r\nService Start Date: 09/22/2012\r\n\r\nService End Date: \r\n\r\nAmount Charged: $504.80\r\n\r\nMedicare Approved: $504.80\r\n\r\nProvider Paid: $126.31\r\n\r\nYou May be Billed: $38.84\r\n\r\nClaim Type: Outpatient\r\n\r\nDiagnosis Code 1: 56400\r\nDiagnosis Code 2: 7245\r\nDiagnosis Code 3: V1588\r\n\r\n--------------------------------\r\nClaim Lines for Claim Number: 12345678900000VAA\r\n\r\n--------------------------------\r\n\r\n\r\n\r\nLine number:  1\r\n\r\nDate of Service From:  09/22/2012\r\n\r\nRevenue Code/Description: 0250 - General Classification PHARMACY\r\n\r\nProcedure Code/Description:  \r\n\r\nModifier 1/Description:  \r\n\r\nModifier 2/Description:  \r\n\r\nModifier 3/Description:  \r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  1\r\n\r\nSubmitted Amount/Charges:  $14.30\r\n\r\nAllowed Amount:  $14.30\r\n\r\nNon-Covered:  $0.00\r\n\r\n\r\n\r\nLine number:  2\r\n\r\nDate of Service From:  09/22/2012\r\n\r\nRevenue Code/Description: 0320 - General Classification DX X-RAY\r\n\r\nProcedure Code/Description:  74020 - Radiologic Examination, Abdomen; Complete, Including Decubitus And/Or Erect Views\r\n\r\nModifier 1/Description:  \r\n\r\nModifier 2/Description:  \r\n\r\nModifier 3/Description:  \r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  1\r\n\r\nSubmitted Amount/Charges:  $175.50\r\n\r\nAllowed Amount:  $175.50\r\n\r\nNon-Covered:  $0.00\r\n\r\n\r\n\r\nLine number:  3\r\n\r\nDate of Service From:  09/22/2012\r\n\r\nRevenue Code/Description: 0450 - General Classification EMERG ROOM\r\n\r\nProcedure Code/Description:  99283 - Emergency Department Visit For The Evaluation And Management Of A Patient, Which Requires Th\r\n\r\nModifier 1/Description:  25 - Significant, Separately Identifiable Evaluation And Management Service By The Same Physician On\r\n\r\nModifier 2/Description:  \r\n\r\nModifier 3/Description:  \r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  1\r\n\r\nSubmitted Amount/Charges:  $315.00\r\n\r\nAllowed Amount:  $315.00\r\n\r\nNon-Covered:  $0.00\r\n\r\n\r\n\r\nLine number:  4\r\n\r\nDate of Service From:  \r\n\r\nRevenue Code/Description: 0001 - Total Charges\r\n\r\nProcedure Code/Description:  \r\n\r\nModifier 1/Description:  \r\n\r\nModifier 2/Description:  \r\n\r\nModifier 3/Description:  \r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  0\r\n\r\nSubmitted Amount/Charges:  $504.80\r\n\r\nAllowed Amount:  $504.80\r\n\r\nNon-Covered:  $0.00\r\n\r\nClaim Number: 1234567890123\r\n\r\nProvider: No Information Available\r\n\r\nProvider Billing Address:    \r\n\r\nService Start Date: 12/01/2012\r\n\r\nService End Date: \r\n\r\nAmount Charged: * Not Available *\r\n\r\nMedicare Approved: * Not Available *\r\n\r\nProvider Paid: * Not Available *\r\n\r\nYou May be Billed: * Not Available *\r\n\r\nClaim Type: PartB\r\n\r\nDiagnosis Code 1: 7392\r\nDiagnosis Code 2: 7241\r\nDiagnosis Code 3: 7393\r\nDiagnosis Code 4: 7391\r\n\r\n--------------------------------\r\nClaim Lines for Claim Number: 1234567890123\r\n\r\n--------------------------------\r\n\r\n\r\n\r\nLine number:  1\r\n\r\nDate of Service From:  12/01/2012\r\n\r\nDate of Service To:  12/01/2012\r\n\r\nProcedure Code/Description:  98941 - Chiropractic Manipulative Treatment, 3 To 4 Spinal Regions\r\n\r\nModifier 1/Description:  GA - Waiver Of Liability Statement Issued As Required By Payer Policy, Individual Case\r\n\r\nModifier 2/Description:  \r\n\r\nModifier 3/Description:  \r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  1\r\n\r\nSubmitted Amount/Charges:  * Not Available *\r\n\r\nAllowed Amount:  * Not Available *\r\n\r\nNon-Covered:  * Not Available *\r\n\r\nPlace of Service/Description:  11 - Office\r\n\r\nType of Service/Description:  1 - Medical Care\r\n\r\nRendering Provider No:  123456\r\n\r\nRendering Provider NPI:  123456789\r\n\r\n\r\n\r\nLine number:  2\r\n\r\nDate of Service From:  12/01/2012\r\n\r\nDate of Service To:  12/01/2012\r\n\r\nProcedure Code/Description:  G0283 - Electrical Stimulation (Unattended), To One Or More Areas For Indication(S) Other Than Wound\r\n\r\nModifier 1/Description:  GY - Item Or Service Statutorily Excluded, Does Not Meet The Definition Of Any Medicare Benefit Or,\r\n\r\nModifier 2/Description:  \r\n\r\nModifier 3/Description:  \r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  1\r\n\r\nSubmitted Amount/Charges:  * Not Available *\r\n\r\nAllowed Amount:  * Not Available *\r\n\r\nNon-Covered:  * Not Available *\r\n\r\nPlace of Service/Description:  11 - Office\r\n\r\nType of Service/Description:  1 - Medical Care\r\n\r\nRendering Provider No:  123456\r\n\r\nRendering Provider NPI:  123456789\r\n\r\n\r\n\r\n--------------------------------\r\nClaim Lines for Claim Number: 123456789012\r\n\r\n--------------------------------\r\n\r\n\r\n\r\nClaim Type: Part D\r\n\r\nClaim Number: 123456789012\r\n\r\nClaim Service Date: 11/17/2011\r\n\r\nPharmacy / Service Provider: 123456789\r\n\r\nPharmacy Name: PHARMACY2 #00000\r\n\r\nDrug Code: 00093013505\r\n\r\nDrug Name: CARVEDILOL\r\n\r\nFill Number: 0\r\n\r\nDays' Supply: 30\r\n\r\nPrescriber Identifer: 123456789\r\n\r\nPrescriber Name: Jane Doe\r\n\r\n\r\n\r\n--------------------------------\r\nClaim Lines for Claim Number: 123456789011\r\n\r\n--------------------------------\r\n\r\n\r\n\r\nClaim Type: Part D\r\n\r\nClaim Number: 123456789011\r\n\r\nClaim Service Date: 11/23/2011\r\n\r\nPharmacy / Service Provider: 1234567890\r\n\r\nPharmacy Name: PHARMACY3 #00000\r\n\r\nDrug Code: 00781223310\r\n\r\nDrug Name: OMEPRAZOLE\r\n\r\nFill Number: 4\r\n\r\nDays' Supply: 30\r\n\r\nPrescriber Identifer: 123456789\r\n\r\nPrescriber Name: Jane Doe\r\n\r\n\r\n\r\n--------------------------------\r\n\r\n\r\n\r\n";
 
         expect(txtfile).to.exist;
 
@@ -188120,7 +188251,7 @@ describe('parser.js', function () {
     });
 
     it('Extra line breaks before sections', function (done) {
-        var txtfile = "--------------------------------\nMYMEDICARE.GOV PERSONAL HEALTH INFORMATION\n\n--------------------------------\n**********CONFIDENTIAL***********\n\nProduced by the Blue Button (v2.0)\n\n03/16/2013 5:10 AM\n\n\n\n\n--------------------------------\nDemographic\n\n--------------------------------\n\nSource: MyMedicare.gov\n\n\n\nName: JOHN DOE\n\nDate of Birth: 01/01/1910\n\nAddress Line 1: 123 ANY ROAD\n\nAddress Line 2: \n\nCity: ANYTOWN\n\nState: VA\n\nZip: 00001\n\nPhone Number: 123-456-7890\n\nEmail: JOHNDOE@example.com\n\nPart A Effective Date: 01/01/2012\n\nPart B Effective Date: 01/01/2012\n\n\n\n--------------------------------\nEmergency Contact\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nContact Name: JANE DOE\n\nAddress Type:Home\n\nAddress Line 1: 123 AnyWhere St\n\nAddress Line 2: \n\nCity: AnyWhere\n\nState: DC\n\nZip: 00002-1111\n\nRelationship: Other\n\nHome Phone: 123-456-7890\n\nWork Phone: 000-001-0001\n\nMobile Phone: 000-001-0002\n\nEmail Address: JANEDOE@example.com\n\n\n\nContact Name: STEVE DOE\n\nAddress Type:\n\nAddress Line 1: 123 AnyWhere Rd\n\nAddress Line 2: \n\nCity: AnyWhere\n\nState: VA\n\nZip: 00001\n\nRelationship: Other\n\nHome Phone: 123-456-7890\n\nWork Phone: 000-001-0001\n\nMobile Phone: 000-001-0002\n\nEmail Address: STEVEDOE@example.com\n\n\n\n--------------------------------\nSelf Reported Medical Conditions\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nCondition Name: Arthritis\n\nMedical Condition Start Date: 08/09/2005\n\nMedical Condition End Date: 02/28/2011\n\n\n\nCondition Name: Asthma\n\nMedical Condition Start Date: 01/25/2008\n\nMedical Condition End Date: 01/25/2010\n\n\n\n--------------------------------\nSelf Reported Allergies\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nAllergy Name: Antibotic\n\nType: Drugs\n\nReaction: Vomiting\n\nSeverity: Severe\n\nDiagnosed: Yes\n\nTreatment: Allergy Shots\n\nFirst Episode Date: 01/08/1926\n\nLast Episode Date: 03/13/1955\n\nLast Treatment Date: 09/28/1949\n\nComments: Erythromycin \n\n\n\nAllergy Name: Grasses\n\nType: Environmental\n\nReaction: Sneezing\n\nSeverity: Severe\n\nDiagnosed: Yes\n\nTreatment: Avoidance\n\nFirst Episode Date: 05/13/1973\n\nLast Episode Date: 07/20/1996\n\nLast Treatment Date: 09/27/2008\n\nComments: \n\n\n\n\n--------------------------------\nSelf Reported Implantable Device\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nDevice Name: Artificial Eye Lenses\n\nDate Implanted: 1/27/1942\n\n\n\n--------------------------------\nSelf Reported Immunizations\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nImmunization Name: Varicella/Chicken Pox\n\nDate Administered:04/21/2002\n\nMethod: Nasal Spray(mist)\n\nWere you vaccinated in the US: \n\nComments: congestion\n\nBooster 1 Date: 02/02/1990\n\nBooster 2 Date: \n\nBooster 3 Date: \n\n\n\nImmunization Name: typhoid\n\nDate Administered:01/02/2009\n\nMethod: Injection\n\nWere you vaccinated in the US: \n\nComments: \n\nBooster 1 Date: \n\nBooster 2 Date: \n\nBooster 3 Date: \n\n\n\n--------------------------------\nSelf Reported Labs and Tests\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nTest/Lab Type: Glucose Level\nDate Taken: 03/21/2008\n\nAdministered by: AnyLab\n\nRequesting Doctor: Dr. Smith\n\nReason Test/Lab Requested: Ongoing elevated glucose\n\nResults: 135, 170, 150, 120\n\nComments: Fasting, hour 1, hour 2, hour 3\n\n\n\n--------------------------------\nSelf Reported Vital Statistics\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nVital Statistic Type: Blood Pressure\n\nDate: 07/22/2011\n\nTime: 3:00 PM\n\nReading: 120/80\n\nComments: \n\n\n\nVital Statistic Type: Glucose\n\nDate: 03/20/2012\n\nTime: 12:00 PM\n\nReading: 110\n\nComments: \n\n\n\n--------------------------------\nFamily Medical History\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nFamily Member: Brother\n\nType: \n\nDOB:1/10/1915\n\nDOD: \n\nAge: \n\nType: Allergy\n\nDescription: Antiarrythmia\n\nDescription: Antibiotic\n\nDescription: Anticonvulsants\n\nType: Condition\n\nDescription: Allergies\n\nDescription: Alzheimer's Disease\n\nDescription: Angina (Heart Pain)\n\nDescription: Cataracts\n\n\n--------------------------------\nDrugs\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nDrug Name: Aspirin\n\nSupply: Dialy\n\nOrig Drug Entry: Aspirin\n\n\n\n\n\n\n\n\n--------------------------------\nPreventive Services\n\n--------------------------------\n\nSource: MyMedicare.gov\n\n\n\nDescription: DIABETES\n\nNext Eligible Date: 10/1/2011\n\nLast Date of Service: \n\n\n\nDescription: PAP TEST DR\n\nNext Eligible Date: 10/1/2011\n\nLast Date of Service: \n\n\n\nDescription: ABDOMINAL AORTIC ANEURYSM\n\nNext Eligible Date: 7/1/2012\n\nLast Date of Service: \n\n\n\nDescription: ANNUAL WELLNESS VISIT\n\nNext Eligible Date: 1/1/2013\n\nLast Date of Service: \n\n\n\nDescription: DEPRESSION SCREENING\n\nNext Eligible Date: 10/14/2012\n\nLast Date of Service: \n\n\n\n--------------------------------\nProviders\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nProvider Name: ANY CARE\n\nProvider Address: 123 Any Rd, Anywhere, MD 99999\n\nType: NHC\n\nSpecialty: \n\nMedicare Provider: Not Available\n\n\n\nProvider Name: ANY HOSPITAL1\n\nProvider Address: 123 Drive, Anywhere, VA 00001\n\nType: HOS\n\nSpecialty: \n\nMedicare Provider: Not Available\n\nProvider Name: Jane Doe\n\nProvider Address: 123 Road, Anywhere, VA 00001\n\nType: PHY\n\nSpecialty: Other\n\nMedicare Provider: Not Available\n\n\n\n--------------------------------\nPharmacies\n\n--------------------------------\n\nSource: Self-Entered\n\n\n\nPharmacy Name: PHARMACY, EAST STREET ANYWHERE, DC 00002\n\nPharmacy Phone: 000-000-0001\n\n\n\nPharmacy Name: ANY PHARMACY, WEST STREET ANYWHERE, VA 00001\n\nPharmacy Phone: 000-000-0002\n\n\n\n--------------------------------\nPlans\n\n--------------------------------\n\nSource: MyMedicare.gov\n\n\n\nContract ID/Plan ID: H9999/9999\n\nPlan Period: 09/01/2011 - current\n\nPlan Name: A Medicare Plan Plus (HMO)\n\nMarketing Name: HealthCare Payer\n\nPlan Address: 123 Any Road Anytown PA 00003\n\nPlan Type: 3 - Coordinated Care Plan (HMO, PPO, PSO, SNP)\n\n\n\nContract ID/Plan ID: S9999/000\n\nPlan Period: 01/01/2010 - current\n\nPlan Name: A Medicare Rx Plan (PDP)\n\nMarketing Name: Another HealthCare Payer\n\nPlan Address: 123 Any Road Anytown PA 00003\n\nPlan Type: 11 - Medicare Prescription Drug Plan\n\n\n\n--------------------------------\nEmployer Subsidy\n\n--------------------------------\n\nSource: MyMedicare.gov\n\n\nEmployer Plan: STATE HEALTH BENEFITS PROGRAM\n\nEmployer Subsidy Start Date: 01/01/2011\n\nEmployer Subsidy End Date: 12/31/2011\n\n\n--------------------------------\nPrimary Insurance\n\n--------------------------------\n\nSource: MyMedicare.gov\n\n\n\nMSP Type: End stage Renal Disease (ESRD)\n\nPolicy Number: 1234567890\n\nInsurer Name: Insurer1\n\nInsurer Address: PO BOX 0000 Anytown, CO 00002-0000\n\nEffective Date: 01/01/2011\n\nTermination Date: 09/30/2011\n\n\n\nMSP Type: End stage Renal Disease (ESRD)\n\nPolicy Number: 12345678901\n\nInsurer Name: Insurer2\n\nInsurer Address: 0000 Any ROAD ANYWHERE, VA 00000-0000\n\nEffective Date: 01/01/2010\n\nTermination Date: 12/31/2010\n\n\n\n--------------------------------\nOther Insurance\n\n--------------------------------\n\nSource: MyMedicare.gov\n\n\n\nMSP Type: \n\nPolicy Number: 00001\n\nInsurer Name: Insurer\n\nInsurer Address: 00 Address STREET ANYWHERE, PA 00000\n\nEffective Date: 10/01/1984\n\nTermination Date: 11/30/2008\n\n\n\n--------------------------------\nClaim Summary\n\n--------------------------------\n\nSource: MyMedicare.gov\n\n\n\nClaim Number: 1234567890000\n\nProvider: No Information Available \nProvider Billing Address:    \n\nService Start Date: 10/18/2012\n\nService End Date: \n\nAmount Charged: $60.00\n\nMedicare Approved: $34.00\n\nProvider Paid: $27.20\n\nYou May be Billed: $6.80\n\nClaim Type: PartB\n\nDiagnosis Code 1: 3534\nDiagnosis Code 2: 7393\nDiagnosis Code 3: 7392\nDiagnosis Code 4: 3533 \n\n--------------------------------\nClaim Lines for Claim Number: 1234567890000\n\n--------------------------------\n\n\n\nLine number:  1\n\nDate of Service From:  10/18/2012\n\nDate of Service To:  10/18/2012\n\nProcedure Code/Description:  98941 - Chiropractic Manipulative Treatment (Cmt); Spinal, Three To Four Regions\n\nModifier 1/Description:  AT - Acute Treatment (This Modifier Should Be Used When Reporting Service 98940, 98941, 98942)\n\nModifier 2/Description:  \n\nModifier 3/Description:  \n\nModifier 4/Description:  \n\nQuantity Billed/Units:  1\n\nSubmitted Amount/Charges:  $60.00\n\nAllowed Amount:  $34.00\n\nNon-Covered:  $26.00\n\nPlace of Service/Description:  11 - Office\n\nType of Service/Description:  1 - Medical Care\n\nRendering Provider No:  0000001\n\nRendering Provider NPI:  123456789\n\n\n\n--------------------------------\n\n\n\n--------------------------------\n\n\n\nClaim Number: 12345678900000VAA\n\nProvider: No Information Available\n \nProvider Billing Address:    \n\nService Start Date: 09/22/2012\n\nService End Date: \n\nAmount Charged: $504.80\n\nMedicare Approved: $504.80\n\nProvider Paid: $126.31\n\nYou May be Billed: $38.84\n\nClaim Type: Outpatient\n\nDiagnosis Code 1: 56400\nDiagnosis Code 2: 7245\nDiagnosis Code 3: V1588\n\n--------------------------------\nClaim Lines for Claim Number: 12345678900000VAA\n\n--------------------------------\n\n\n\nLine number:  1\n\nDate of Service From:  09/22/2012\n\nRevenue Code/Description: 0250 - General Classification PHARMACY\n\nProcedure Code/Description:  \n\nModifier 1/Description:  \n\nModifier 2/Description:  \n\nModifier 3/Description:  \n\nModifier 4/Description:  \n\nQuantity Billed/Units:  1\n\nSubmitted Amount/Charges:  $14.30\n\nAllowed Amount:  $14.30\n\nNon-Covered:  $0.00\n\n\n\nLine number:  2\n\nDate of Service From:  09/22/2012\n\nRevenue Code/Description: 0320 - General Classification DX X-RAY\n\nProcedure Code/Description:  74020 - Radiologic Examination, Abdomen; Complete, Including Decubitus And/Or Erect Views\n\nModifier 1/Description:  \n\nModifier 2/Description:  \n\nModifier 3/Description:  \n\nModifier 4/Description:  \n\nQuantity Billed/Units:  1\n\nSubmitted Amount/Charges:  $175.50\n\nAllowed Amount:  $175.50\n\nNon-Covered:  $0.00\n\n\n\nLine number:  3\n\nDate of Service From:  09/22/2012\n\nRevenue Code/Description: 0450 - General Classification EMERG ROOM\n\nProcedure Code/Description:  99283 - Emergency Department Visit For The Evaluation And Management Of A Patient, Which Requires Th\n\nModifier 1/Description:  25 - Significant, Separately Identifiable Evaluation And Management Service By The Same Physician On\n\nModifier 2/Description:  \n\nModifier 3/Description:  \n\nModifier 4/Description:  \n\nQuantity Billed/Units:  1\n\nSubmitted Amount/Charges:  $315.00\n\nAllowed Amount:  $315.00\n\nNon-Covered:  $0.00\n\n\n\nLine number:  4\n\nDate of Service From:  \n\nRevenue Code/Description: 0001 - Total Charges\n\nProcedure Code/Description:  \n\nModifier 1/Description:  \n\nModifier 2/Description:  \n\nModifier 3/Description:  \n\nModifier 4/Description:  \n\nQuantity Billed/Units:  0\n\nSubmitted Amount/Charges:  $504.80\n\nAllowed Amount:  $504.80\n\nNon-Covered:  $0.00\n\nClaim Number: 1234567890123\n\nProvider: No Information Available\n\nProvider Billing Address:    \n\nService Start Date: 12/01/2012\n\nService End Date: \n\nAmount Charged: * Not Available *\n\nMedicare Approved: * Not Available *\n\nProvider Paid: * Not Available *\n\nYou May be Billed: * Not Available *\n\nClaim Type: PartB\n\nDiagnosis Code 1: 7392\nDiagnosis Code 2: 7241\nDiagnosis Code 3: 7393\nDiagnosis Code 4: 7391\n\n--------------------------------\nClaim Lines for Claim Number: 1234567890123\n\n--------------------------------\n\n\n\nLine number:  1\n\nDate of Service From:  12/01/2012\n\nDate of Service To:  12/01/2012\n\nProcedure Code/Description:  98941 - Chiropractic Manipulative Treatment, 3 To 4 Spinal Regions\n\nModifier 1/Description:  GA - Waiver Of Liability Statement Issued As Required By Payer Policy, Individual Case\n\nModifier 2/Description:  \n\nModifier 3/Description:  \n\nModifier 4/Description:  \n\nQuantity Billed/Units:  1\n\nSubmitted Amount/Charges:  * Not Available *\n\nAllowed Amount:  * Not Available *\n\nNon-Covered:  * Not Available *\n\nPlace of Service/Description:  11 - Office\n\nType of Service/Description:  1 - Medical Care\n\nRendering Provider No:  123456\n\nRendering Provider NPI:  123456789\n\n\n\nLine number:  2\n\nDate of Service From:  12/01/2012\n\nDate of Service To:  12/01/2012\n\nProcedure Code/Description:  G0283 - Electrical Stimulation (Unattended), To One Or More Areas For Indication(S) Other Than Wound\n\nModifier 1/Description:  GY - Item Or Service Statutorily Excluded, Does Not Meet The Definition Of Any Medicare Benefit Or,\n\nModifier 2/Description:  \n\nModifier 3/Description:  \n\nModifier 4/Description:  \n\nQuantity Billed/Units:  1\n\nSubmitted Amount/Charges:  * Not Available *\n\nAllowed Amount:  * Not Available *\n\nNon-Covered:  * Not Available *\n\nPlace of Service/Description:  11 - Office\n\nType of Service/Description:  1 - Medical Care\n\nRendering Provider No:  123456\n\nRendering Provider NPI:  123456789\n\n\n\n--------------------------------\nClaim Lines for Claim Number: 123456789012\n\n--------------------------------\n\n\n\nClaim Type: Part D\n\nClaim Number: 123456789012\n\nClaim Service Date: 11/17/2011\n\nPharmacy / Service Provider: 123456789\n\nPharmacy Name: PHARMACY2 #00000\n\nDrug Code: 00093013505\n\nDrug Name: CARVEDILOL\n\nFill Number: 0\n\nDays' Supply: 30\n\nPrescriber Identifer: 123456789\n\nPrescriber Name: Jane Doe\n\n\n\n--------------------------------\nClaim Lines for Claim Number: 123456789011\n\n--------------------------------\n\n\n\nClaim Type: Part D\n\nClaim Number: 123456789011\n\nClaim Service Date: 11/23/2011\n\nPharmacy / Service Provider: 1234567890\n\nPharmacy Name: PHARMACY3 #00000\n\nDrug Code: 00781223310\n\nDrug Name: OMEPRAZOLE\n\nFill Number: 4\n\nDays' Supply: 30\n\nPrescriber Identifer: 123456789\n\nPrescriber Name: Jane Doe\n\n\n\n--------------------------------\n\n\n\n";
+        var txtfile = "--------------------------------\r\nMYMEDICARE.GOV PERSONAL HEALTH INFORMATION\r\n\r\n--------------------------------\r\n**********CONFIDENTIAL***********\r\n\r\nProduced by the Blue Button (v2.0)\r\n\r\n03/16/2013 5:10 AM\r\n\r\n\r\n\r\n\r\n--------------------------------\r\nDemographic\r\n\r\n--------------------------------\r\n\r\nSource: MyMedicare.gov\r\n\r\n\r\n\r\nName: JOHN DOE\r\n\r\nDate of Birth: 01/01/1910\r\n\r\nAddress Line 1: 123 ANY ROAD\r\n\r\nAddress Line 2: \r\n\r\nCity: ANYTOWN\r\n\r\nState: VA\r\n\r\nZip: 00001\r\n\r\nPhone Number: 123-456-7890\r\n\r\nEmail: JOHNDOE@example.com\r\n\r\nPart A Effective Date: 01/01/2012\r\n\r\nPart B Effective Date: 01/01/2012\r\n\r\n\r\n\r\n--------------------------------\r\nEmergency Contact\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nContact Name: JANE DOE\r\n\r\nAddress Type:Home\r\n\r\nAddress Line 1: 123 AnyWhere St\r\n\r\nAddress Line 2: \r\n\r\nCity: AnyWhere\r\n\r\nState: DC\r\n\r\nZip: 00002-1111\r\n\r\nRelationship: Other\r\n\r\nHome Phone: 123-456-7890\r\n\r\nWork Phone: 000-001-0001\r\n\r\nMobile Phone: 000-001-0002\r\n\r\nEmail Address: JANEDOE@example.com\r\n\r\n\r\n\r\nContact Name: STEVE DOE\r\n\r\nAddress Type:\r\n\r\nAddress Line 1: 123 AnyWhere Rd\r\n\r\nAddress Line 2: \r\n\r\nCity: AnyWhere\r\n\r\nState: VA\r\n\r\nZip: 00001\r\n\r\nRelationship: Other\r\n\r\nHome Phone: 123-456-7890\r\n\r\nWork Phone: 000-001-0001\r\n\r\nMobile Phone: 000-001-0002\r\n\r\nEmail Address: STEVEDOE@example.com\r\n\r\n\r\n\r\n--------------------------------\r\nSelf Reported Medical Conditions\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nCondition Name: Arthritis\r\n\r\nMedical Condition Start Date: 08/09/2005\r\n\r\nMedical Condition End Date: 02/28/2011\r\n\r\n\r\n\r\nCondition Name: Asthma\r\n\r\nMedical Condition Start Date: 01/25/2008\r\n\r\nMedical Condition End Date: 01/25/2010\r\n\r\n\r\n\r\n--------------------------------\r\nSelf Reported Allergies\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nAllergy Name: Antibotic\r\n\r\nType: Drugs\r\n\r\nReaction: Vomiting\r\n\r\nSeverity: Severe\r\n\r\nDiagnosed: Yes\r\n\r\nTreatment: Allergy Shots\r\n\r\nFirst Episode Date: 01/08/1926\r\n\r\nLast Episode Date: 03/13/1955\r\n\r\nLast Treatment Date: 09/28/1949\r\n\r\nComments: Erythromycin \r\n\r\n\r\n\r\nAllergy Name: Grasses\r\n\r\nType: Environmental\r\n\r\nReaction: Sneezing\r\n\r\nSeverity: Custom Severe\r\n\r\nDiagnosed: Yes\r\n\r\nTreatment: Avoidance\r\n\r\nFirst Episode Date: 05/13/1973\r\n\r\nLast Episode Date: 07/20/1996\r\n\r\nLast Treatment Date: 09/27/2008\r\n\r\nComments: \r\n\r\n\r\n\r\n\r\n--------------------------------\r\nSelf Reported Implantable Device\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nDevice Name: Artificial Eye Lenses\r\n\r\nDate Implanted: 1/27/1942\r\n\r\n\r\n\r\n--------------------------------\r\nSelf Reported Immunizations\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nImmunization Name: Varicella/Chicken Pox\r\n\r\nDate Administered:04/21/2002\r\n\r\nMethod: Nasal Spray(mist)\r\n\r\nWere you vaccinated in the US: \r\n\r\nComments: congestion\r\n\r\nBooster 1 Date: 02/02/1990\r\n\r\nBooster 2 Date: \r\n\r\nBooster 3 Date: \r\n\r\n\r\n\r\nImmunization Name: typhoid\r\n\r\nDate Administered:01/02/2009\r\n\r\nMethod: Injection\r\n\r\nWere you vaccinated in the US: \r\n\r\nComments: \r\n\r\nBooster 1 Date: \r\n\r\nBooster 2 Date: \r\n\r\nBooster 3 Date: \r\n\r\n\r\n\r\n--------------------------------\r\nSelf Reported Labs and Tests\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nTest/Lab Type: Glucose Level\r\nDate Taken: 03/21/2008\r\n\r\nAdministered by: AnyLab\r\n\r\nRequesting Doctor: Dr. Smith\r\n\r\nReason Test/Lab Requested: Ongoing elevated glucose\r\n\r\nResults: 135, 170, 150, 120\r\n\r\nComments: Fasting, hour 1, hour 2, hour 3\r\n\r\n\r\n\r\n--------------------------------\r\nSelf Reported Vital Statistics\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nVital Statistic Type: Blood Pressure\r\n\r\nDate: 07/22/2011\r\n\r\nTime: 3:00 PM\r\n\r\nReading: 120/80\r\n\r\nComments: \r\n\r\n\r\n\r\nVital Statistic Type: Glucose\r\n\r\nDate: 03/20/2012\r\n\r\nTime: 12:00 PM\r\n\r\nReading: 110\r\n\r\nComments: \r\n\r\n\r\nVital Statistic Type: Height\r\n\r\nDate: 03/20/2012\r\n\r\nTime: 12:00 PM\r\n\r\nReading: 180\r\n\r\nComments: Height\r\n\r\n\r\n\r\nVital Statistic Type: Weight\r\n\r\nDate: 03/20/2012\r\n\r\nTime: 12:00 PM\r\n\r\nReading: 80\r\n\r\nComments: Weight\r\n\r\n\r\n\r\n--------------------------------\r\nFamily Medical History\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nFamily Member: Brother\r\n\r\nType: \r\n\r\nDOB:1/10/1915\r\n\r\nDOD: \r\n\r\nAge: \r\n\r\nType: Allergy\r\n\r\nDescription: Antiarrythmia\r\n\r\nDescription: Antibiotic\r\n\r\nDescription: Anticonvulsants\r\n\r\nType: Condition\r\n\r\nDescription: Allergies\r\n\r\nDescription: Alzheimer's Disease\r\n\r\nDescription: Angina (Heart Pain)\r\n\r\nDescription: Cataracts\r\n\r\n\r\n--------------------------------\r\nDrugs\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nDrug Name: Aspirin\r\n\r\nSupply: Dialy\r\n\r\nOrig Drug Entry: Aspirin\r\n\r\nLast Treatment Date: 09/28/1949\r\n\r\nComments: Fasting, hour 1, hour 2, hour 3\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n--------------------------------\r\nPreventive Services\r\n\r\n--------------------------------\r\n\r\nSource: MyMedicare.gov\r\n\r\n\r\n\r\nDescription: DIABETES\r\n\r\nNext Eligible Date: 10/1/2011\r\n\r\nLast Date of Service: 10/1/2015\r\n\r\n\r\n\r\nDescription: PAP TEST DR\r\n\r\nNext Eligible Date: 10/1/2011\r\n\r\nLast Date of Service: \r\n\r\n\r\n\r\nDescription: ABDOMINAL AORTIC ANEURYSM\r\n\r\nNext Eligible Date: 7/1/2012\r\n\r\nLast Date of Service: \r\n\r\n\r\n\r\nDescription: ANNUAL WELLNESS VISIT\r\n\r\nNext Eligible Date: 1/1/2013\r\n\r\nLast Date of Service: \r\n\r\n\r\n\r\nDescription: DEPRESSION SCREENING\r\n\r\nNext Eligible Date: 10/14/2012\r\n\r\nLast Date of Service: \r\n\r\n\r\n\r\n--------------------------------\r\nProviders\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nProvider Name: ANY CARE\r\n\r\nProvider Address: 123 Any Rd, Anywhere, MD 99999\r\n\r\nType: NHC\r\n\r\nSpecialty: \r\n\r\nMedicare Provider: Not Available\r\n\r\n\r\n\r\nProvider Name: ANY HOSPITAL1\r\n\r\nProvider Address: 123 Drive, Anywhere, VA 00001\r\n\r\nType: HOS\r\n\r\nSpecialty: \r\n\r\nMedicare Provider: Not Available\r\n\r\nProvider Name: Jane Doe\r\n\r\nProvider Address: 123 Road, Anywhere, VA 00001\r\n\r\nType: PHY\r\n\r\nSpecialty: Other\r\n\r\nMedicare Provider: Not Available\r\n\r\n\r\n\r\n--------------------------------\r\nPharmacies\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nPharmacy Name: PHARMACY, EAST STREET ANYWHERE, DC 00002\r\n\r\nPharmacy Phone: 000-000-0001\r\n\r\n\r\n\r\nPharmacy Name: ANY PHARMACY, WEST STREET ANYWHERE, VA 00001\r\n\r\nPharmacy Phone: 000-000-0002\r\n\r\n\r\n\r\n--------------------------------\r\nPlans\r\n\r\n--------------------------------\r\n\r\nSource: MyMedicare.gov\r\n\r\n\r\n\r\nContract ID/Plan ID: H9999/9999\r\n\r\nPlan Period: 09/01/2011 - current\r\n\r\nPlan Name: A Medicare Plan Plus (HMO)\r\n\r\nMarketing Name: HealthCare Payer\r\n\r\nEmail: test@mail.com\r\n\r\nPhone: 13-456-789\r\n\r\nPlan Address: 123 Any Road Anytown PA 00003\r\n\r\nPlan Type: 3 - Coordinated Care Plan (HMO, PPO, PSO, SNP)\r\n\r\n\r\n\r\nContract ID/Plan ID: S9999/000\r\n\r\nPlan Period: 01/01/2010 - current\r\n\r\nPlan Name: A Medicare Rx Plan (PDP)\r\n\r\nMarketing Name: Another HealthCare Payer\r\n\r\nPlan Address: 123 Any Road Anytown PA 00003\r\n\r\nPlan Type: 11 - Medicare Prescription Drug Plan\r\n\r\n\r\n\r\n--------------------------------\r\nEmployer Subsidy\r\n\r\n--------------------------------\r\n\r\nSource: MyMedicare.gov\r\n\r\n\r\nEmployer Plan: STATE HEALTH BENEFITS PROGRAM\r\n\r\nEmployer Subsidy Start Date: 01/01/2011\r\n\r\nEmployer Subsidy End Date: 12/31/2011\r\n\r\n\r\n--------------------------------\r\nPrimary Insurance\r\n\r\n--------------------------------\r\n\r\nSource: MyMedicare.gov\r\n\r\n\r\n\r\nMSP Type: End stage Renal Disease (ESRD)\r\n\r\nPolicy Number: 1234567890\r\n\r\nInsurer Name: Insurer1\r\n\r\nInsurer Address: PO BOX 0000 Anytown, CO 00002-0000\r\n\r\nEffective Date: 01/01/2011\r\n\r\nTermination Date: 09/30/2011\r\n\r\n\r\n\r\nMSP Type: End stage Renal Disease (ESRD)\r\n\r\nPolicy Number: 12345678901\r\n\r\nInsurer Name: Insurer2\r\n\r\nInsurer Address: 0000 Any ROAD ANYWHERE, VA 00000-0000\r\n\r\nEffective Date: 01/01/2010\r\n\r\nTermination Date: 12/31/2010\r\n\r\n\r\n\r\n--------------------------------\r\nOther Insurance\r\n\r\n--------------------------------\r\n\r\nSource: MyMedicare.gov\r\n\r\n\r\n\r\nMSP Type: \r\n\r\nPolicy Number: 00001\r\n\r\nInsurer Name: Insurer\r\n\r\nInsurer Address: 00 Address STREET ANYWHERE, PA 00000\r\n\r\nEffective Date: 10/01/1984\r\n\r\nTermination Date: 11/30/2008\r\n\r\n\r\n\r\nMSP Type: 290\r\n\r\nPolicy Number: 00125\r\n\r\nInsurer Name: CAREFIRST DC (PART A ONLY)\r\n\r\nInsurer Address: 10455 MILL RUN CIRCLE OWING MILLS, MD 21117\r\n\r\nEffective Date: 01/08/1995\r\n\r\nTermination Date: \r\n\r\n\r\n--------------------------------\r\nClaim Summary\r\n\r\n--------------------------------\r\n\r\nSource: MyMedicare.gov\r\n\r\n\r\n\r\nClaim Number: 1234567890000\r\n\r\nProvider: No Information Available \r\nProvider Billing Address:    \r\n\r\nService Start Date: 10/18/2012\r\n\r\nService End Date: \r\n\r\nAmount Charged: $60.00\r\n\r\nMedicare Approved: $34.00\r\n\r\nProvider Paid: $27.20\r\n\r\nYou May be Billed: $6.80\r\n\r\nClaim Type: PartB\r\n\r\nDiagnosis Code 1: 3534\r\nDiagnosis Code 2: 7393\r\nDiagnosis Code 3: 7392\r\nDiagnosis Code 4: 3533 \r\n\r\n--------------------------------\r\nClaim Lines for Claim Number: 1234567890000\r\n\r\n--------------------------------\r\n\r\n\r\n\r\nLine number:  1\r\n\r\nDate of Service From:  10/18/2012\r\n\r\nDate of Service To:  10/18/2012\r\n\r\nProcedure Code/Description:  98941 - Chiropractic Manipulative Treatment (Cmt); Spinal, Three To Four Regions\r\n\r\nModifier 1/Description:  AT - Acute Treatment (This Modifier Should Be Used When Reporting Service 98940, 98941, 98942)\r\n\r\nModifier 2/Description:  GP - Services Delivered Under An Outpatient Physical Therapy Plan Of Care\r\n\r\nModifier 3/Description:  CI - At Least 1 Percent But Less Than 20 Percent Impaired, Limited Or Restricted\r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  1\r\n\r\nSubmitted Amount/Charges:  $60.00\r\n\r\nAllowed Amount:  $34.00\r\n\r\nNon-Covered:  * Not Available *\r\n\r\nPlace of Service/Description:  11 - Office\r\n\r\nType of Service/Description:  1 - Medical Care\r\n\r\nRendering Provider No:  0000001\r\n\r\nRendering Provider NPI:  123456789\r\n\r\n\r\n\r\nLine number:  2\r\n\r\nDate of Service From:  06/10/2015\r\n\r\nDate of Service To:  06/10/2015\r\n\r\nProcedure Code/Description:  G8907 - Patient Documented Not To Have Experienced Any Of The Following Events: A Burn Prior To Disc\r\n\r\nModifier 1/Description:  \r\n\r\nModifier 2/Description:  \r\n\r\nModifier 3/Description:  \r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  1\r\n\r\nSubmitted Amount/Charges:  * Not Available *\r\n\r\nAllowed Amount:  * Not Available *\r\n\r\nNon-Covered:  * Not Available *\r\n\r\nPlace of Service/Description:  24 - Ambulatory  Surgical Center\r\n\r\nType of Service/Description:  F - Ambulatory Surgical Center\r\n\r\nRendering Provider No:  A01234\r\n\r\nRendering Provider NPI:  1871238456\r\n\r\n\r\n\r\nLine number:  3\r\n\r\nDate of Service From:  06/10/2015\r\n\r\nDate of Service To:  06/10/2015\r\n\r\nProcedure Code/Description:  G8918 - Patient Without Preoperative Order For Iv Antibiotic Surgical Site Infection (Ssi) Prophylax\r\n\r\nModifier 1/Description:  \r\n\r\nModifier 2/Description:  \r\n\r\nModifier 3/Description:  \r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  1\r\n\r\nSubmitted Amount/Charges:  * Not Available *\r\n\r\nAllowed Amount:  * Not Available *\r\n\r\nNon-Covered:  * Not Available *\r\n\r\nPlace of Service/Description:  24 - Ambulatory  Surgical Center\r\n\r\nType of Service/Description:  F - Ambulatory Surgical Center\r\n\r\nRendering Provider No:  A0987654\r\n\r\nRendering Provider NPI:  1098765429\r\n\r\n\r\n\r\n--------------------------------\r\n\r\n\r\n\r\n--------------------------------\r\n\r\n\r\n\r\nClaim Number: 12345678900000VAA\r\n\r\nProvider: No Information Available\r\n \r\nProvider Billing Address:    \r\n\r\nService Start Date: 09/22/2012\r\n\r\nService End Date: \r\n\r\nAmount Charged: $504.80\r\n\r\nMedicare Approved: $504.80\r\n\r\nProvider Paid: $126.31\r\n\r\nYou May be Billed: $38.84\r\n\r\nClaim Type: Outpatient\r\n\r\nDiagnosis Code 1: 56400\r\nDiagnosis Code 2: 7245\r\nDiagnosis Code 3: V1588\r\n\r\n--------------------------------\r\nClaim Lines for Claim Number: 12345678900000VAA\r\n\r\n--------------------------------\r\n\r\n\r\n\r\nLine number:  1\r\n\r\nDate of Service From:  09/22/2012\r\n\r\nRevenue Code/Description: 0250 - General Classification PHARMACY\r\n\r\nProcedure Code/Description:  \r\n\r\nModifier 1/Description:  \r\n\r\nModifier 2/Description:  \r\n\r\nModifier 3/Description:  \r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  1\r\n\r\nSubmitted Amount/Charges:  $14.30\r\n\r\nAllowed Amount:  $14.30\r\n\r\nNon-Covered:  $0.00\r\n\r\n\r\n\r\nLine number:  2\r\n\r\nDate of Service From:  09/22/2012\r\n\r\nRevenue Code/Description: 0320 - General Classification DX X-RAY\r\n\r\nProcedure Code/Description:  74020 - Radiologic Examination, Abdomen; Complete, Including Decubitus And/Or Erect Views\r\n\r\nModifier 1/Description:  \r\n\r\nModifier 2/Description:  \r\n\r\nModifier 3/Description:  \r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  1\r\n\r\nSubmitted Amount/Charges:  $175.50\r\n\r\nAllowed Amount:  $175.50\r\n\r\nNon-Covered:  $0.00\r\n\r\n\r\n\r\nLine number:  3\r\n\r\nDate of Service From:  09/22/2012\r\n\r\nRevenue Code/Description: 0450 - General Classification EMERG ROOM\r\n\r\nProcedure Code/Description:  99283 - Emergency Department Visit For The Evaluation And Management Of A Patient, Which Requires Th\r\n\r\nModifier 1/Description:  25 - Significant, Separately Identifiable Evaluation And Management Service By The Same Physician On\r\n\r\nModifier 2/Description:  \r\n\r\nModifier 3/Description:  \r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  1\r\n\r\nSubmitted Amount/Charges:  $315.00\r\n\r\nAllowed Amount:  $315.00\r\n\r\nNon-Covered:  $0.00\r\n\r\n\r\n\r\nLine number:  4\r\n\r\nDate of Service From:  \r\n\r\nRevenue Code/Description: 0001 - Total Charges\r\n\r\nProcedure Code/Description:  \r\n\r\nModifier 1/Description:  \r\n\r\nModifier 2/Description:  \r\n\r\nModifier 3/Description:  \r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  0\r\n\r\nSubmitted Amount/Charges:  $504.80\r\n\r\nAllowed Amount:  $504.80\r\n\r\nNon-Covered:  $0.00\r\n\r\nClaim Number: 1234567890123\r\n\r\nProvider: No Information Available\r\n\r\nProvider Billing Address:    \r\n\r\nService Start Date: 12/01/2012\r\n\r\nService End Date: \r\n\r\nAmount Charged: * Not Available *\r\n\r\nMedicare Approved: * Not Available *\r\n\r\nProvider Paid: * Not Available *\r\n\r\nYou May be Billed: * Not Available *\r\n\r\nClaim Type: PartB\r\n\r\nDiagnosis Code 1: 7392\r\nDiagnosis Code 2: 7241\r\nDiagnosis Code 3: 7393\r\nDiagnosis Code 4: 7391\r\n\r\n--------------------------------\r\nClaim Lines for Claim Number: 1234567890123\r\n\r\n--------------------------------\r\n\r\n\r\n\r\nLine number:  1\r\n\r\nDate of Service From:  12/01/2012\r\n\r\nDate of Service To:  12/01/2012\r\n\r\nProcedure Code/Description:  98941 - Chiropractic Manipulative Treatment, 3 To 4 Spinal Regions\r\n\r\nModifier 1/Description:  GA - Waiver Of Liability Statement Issued As Required By Payer Policy, Individual Case\r\n\r\nModifier 2/Description:  \r\n\r\nModifier 3/Description:  \r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  1\r\n\r\nSubmitted Amount/Charges:  * Not Available *\r\n\r\nAllowed Amount:  * Not Available *\r\n\r\nNon-Covered:  * Not Available *\r\n\r\nPlace of Service/Description:  11 - Office\r\n\r\nType of Service/Description:  1 - Medical Care\r\n\r\nRendering Provider No:  123456\r\n\r\nRendering Provider NPI:  123456789\r\n\r\n\r\n\r\nLine number:  2\r\n\r\nDate of Service From:  12/01/2012\r\n\r\nDate of Service To:  12/01/2012\r\n\r\nProcedure Code/Description:  G0283 - Electrical Stimulation (Unattended), To One Or More Areas For Indication(S) Other Than Wound\r\n\r\nModifier 1/Description:  GY - Item Or Service Statutorily Excluded, Does Not Meet The Definition Of Any Medicare Benefit Or,\r\n\r\nModifier 2/Description:  \r\n\r\nModifier 3/Description:  \r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  1\r\n\r\nSubmitted Amount/Charges:  * Not Available *\r\n\r\nAllowed Amount:  * Not Available *\r\n\r\nNon-Covered:  * Not Available *\r\n\r\nPlace of Service/Description:  11 - Office\r\n\r\nType of Service/Description:  1 - Medical Care\r\n\r\nRendering Provider No:  123456\r\n\r\nRendering Provider NPI:  123456789\r\n\r\n\r\n\r\n--------------------------------\r\nClaim Lines for Claim Number: 123456789012\r\n\r\n--------------------------------\r\n\r\n\r\n\r\nClaim Type: Part D\r\n\r\nClaim Number: 123456789012\r\n\r\nClaim Service Date: 11/17/2011\r\n\r\nPharmacy / Service Provider: 123456789\r\n\r\nPharmacy Name: PHARMACY2 #00000\r\n\r\nDrug Code: 00093013505\r\n\r\nDrug Name: CARVEDILOL\r\n\r\nFill Number: 0\r\n\r\nDays' Supply: 30\r\n\r\nPrescriber Identifer: 123456789\r\n\r\nPrescriber Name: Jane Doe\r\n\r\n\r\n\r\n--------------------------------\r\nClaim Lines for Claim Number: 123456789011\r\n\r\n--------------------------------\r\n\r\n\r\n\r\nClaim Type: Part D\r\n\r\nClaim Number: 123456789011\r\n\r\nClaim Service Date: 11/23/2011\r\n\r\nPharmacy / Service Provider: 1234567890\r\n\r\nPharmacy Name: PHARMACY3 #00000\r\n\r\nDrug Code: 00781223310\r\n\r\nDrug Name: OMEPRAZOLE\r\n\r\nFill Number: 4\r\n\r\nDays' Supply: 30\r\n\r\nPrescriber Identifer: 123456789\r\n\r\nPrescriber Name: Jane Doe\r\n\r\n\r\n\r\n--------------------------------\r\n\r\n\r\n\r\n";
 
         expect(txtfile).to.exist;
 
@@ -188140,4 +188271,78 @@ describe('parser.js', function () {
     });
 });
 
-},{"../index":1,"blue-button-model":20,"chai":56}]},{},[97]);
+},{"../index":1,"blue-button-model":20,"chai":56}],98:[function(require,module,exports){
+"use strict";
+
+var expect = require('chai').expect;
+
+
+var bbcms = require("../index");
+var bbm = require('blue-button-model');
+
+if (!Array.prototype.find) {
+    Array.prototype.find = function (predicate) {
+        if (this == null) {
+            throw new TypeError('Array.prototype.find called on null or undefined');
+        }
+        if (typeof predicate !== 'function') {
+            throw new TypeError('predicate must be a function');
+        }
+        var list = Object(this);
+        var length = list.length >>> 0;
+        var thisArg = arguments[1];
+        var value;
+
+        for (var i = 0; i < length; i++) {
+            value = list[i];
+            if (predicate.call(thisArg, value, i, list)) {
+                return value;
+            }
+        }
+        return undefined;
+    };
+}
+
+describe('parser.js', function () {
+    it('CMS parser/model validation', function (done) {
+        var txtfile = "--------------------------------\r\nMYMEDICARE.GOV PERSONAL HEALTH INFORMATION\r\n\r\n--------------------------------\r\n**********CONFIDENTIAL***********\r\n\r\nProduced by the Blue Button (v2.0)\r\n\r\n03/16/2013 5:10 AM\r\n\r\n\r\n\r\n\r\n--------------------------------\r\nDemographic\r\n\r\n--------------------------------\r\n\r\nSource: MyMedicare.gov\r\n\r\n\r\n\r\nName: JOHN DOE\r\n\r\nDate of Birth: 01/01/1910\r\n\r\nAddress Line 1: 123 ANY ROAD\r\n\r\nAddress Line 2: \r\n\r\nCity: ANYTOWN\r\n\r\nState: VA\r\n\r\nZip: 00001\r\n\r\nPhone Number: 123-456-7890\r\n\r\nEmail: JOHNDOE@example.com\r\n\r\nPart A Effective Date: 01/01/2012\r\n\r\nPart B Effective Date: 01/01/2012\r\n\r\n\r\n\r\n--------------------------------\r\nEmergency Contact\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nContact Name: JANE DOE\r\n\r\nAddress Type:Home\r\n\r\nAddress Line 1: 123 AnyWhere St\r\n\r\nAddress Line 2: \r\n\r\nCity: AnyWhere\r\n\r\nState: DC\r\n\r\nZip: 00002-1111\r\n\r\nRelationship: Other\r\n\r\nHome Phone: 123-456-7890\r\n\r\nWork Phone: 000-001-0001\r\n\r\nMobile Phone: 000-001-0002\r\n\r\nEmail Address: JANEDOE@example.com\r\n\r\n\r\n\r\nContact Name: STEVE DOE\r\n\r\nAddress Type:\r\n\r\nAddress Line 1: 123 AnyWhere Rd\r\n\r\nAddress Line 2: \r\n\r\nCity: AnyWhere\r\n\r\nState: VA\r\n\r\nZip: 00001\r\n\r\nRelationship: Other\r\n\r\nHome Phone: 123-456-7890\r\n\r\nWork Phone: 000-001-0001\r\n\r\nMobile Phone: 000-001-0002\r\n\r\nEmail Address: STEVEDOE@example.com\r\n\r\n\r\n\r\n--------------------------------\r\nSelf Reported Medical Conditions\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nCondition Name: Arthritis\r\n\r\nMedical Condition Start Date: 08/09/2005\r\n\r\nMedical Condition End Date: 02/28/2011\r\n\r\n\r\n\r\nCondition Name: Asthma\r\n\r\nMedical Condition Start Date: 01/25/2008\r\n\r\nMedical Condition End Date: 01/25/2010\r\n\r\n\r\n\r\n--------------------------------\r\nSelf Reported Allergies\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nAllergy Name: Antibotic\r\n\r\nType: Drugs\r\n\r\nReaction: Vomiting\r\n\r\nSeverity: Severe\r\n\r\nDiagnosed: Yes\r\n\r\nTreatment: Allergy Shots\r\n\r\nFirst Episode Date: 01/08/1926\r\n\r\nLast Episode Date: 03/13/1955\r\n\r\nLast Treatment Date: 09/28/1949\r\n\r\nComments: Erythromycin \r\n\r\n\r\n\r\nAllergy Name: Grasses\r\n\r\nType: Environmental\r\n\r\nReaction: Sneezing\r\n\r\nSeverity: Severe\r\n\r\nDiagnosed: Yes\r\n\r\nTreatment: Avoidance\r\n\r\nFirst Episode Date: 05/13/1973\r\n\r\nLast Episode Date: 07/20/1996\r\n\r\nLast Treatment Date: 09/27/2008\r\n\r\nComments: \r\n\r\n\r\n\r\n--------------------------------\r\nSelf Reported Implantable Device\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nDevice Name: Artificial Eye Lenses\r\n\r\nDate Implanted: 1/27/1942\r\n\r\n\r\n\r\n--------------------------------\r\nSelf Reported Immunizations\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nImmunization Name: Varicella/Chicken Pox\r\n\r\nDate Administered:04/21/2002\r\n\r\nMethod: Nasal Spray(mist)\r\n\r\nWere you vaccinated in the US: \r\n\r\nComments: congestion\r\n\r\nBooster 1 Date: 02/02/1990\r\n\r\nBooster 2 Date: \r\n\r\nBooster 3 Date: \r\n\r\n\r\n\r\nImmunization Name: typhoid\r\n\r\nDate Administered:01/02/2009\r\n\r\nMethod: Injection\r\n\r\nWere you vaccinated in the US: \r\n\r\nComments: \r\n\r\nBooster 1 Date: \r\n\r\nBooster 2 Date: \r\n\r\nBooster 3 Date: \r\n\r\n\r\n\r\n--------------------------------\r\nSelf Reported Labs and Tests\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nTest/Lab Type: Glucose Level\r\nDate Taken: 03/21/2008\r\n\r\nAdministered by: AnyLab\r\n\r\nRequesting Doctor: Dr. Smith\r\n\r\nReason Test/Lab Requested: Ongoing elevated glucose\r\n\r\nResults: 135, 170, 150, 120\r\n\r\nComments: Fasting, hour 1, hour 2, hour 3\r\n\r\n\r\n\r\n--------------------------------\r\nSelf Reported Vital Statistics\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nVital Statistic Type: Blood Pressure\r\n\r\nDate: 07/22/2011\r\n\r\nTime: 3:00 PM\r\n\r\nReading: 120/80\r\n\r\nComments: \r\n\r\n\r\n\r\nVital Statistic Type: Glucose\r\n\r\nDate: 03/20/2012\r\n\r\nTime: 12:00 PM\r\n\r\nReading: 110\r\n\r\nComments: \r\n\r\n\r\n\r\n--------------------------------\r\nFamily Medical History\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nFamily Member: Brother\r\n\r\nType: \r\n\r\nDOB:1/10/1915\r\n\r\nDOD: \r\n\r\nAge: \r\n\r\nType: Allergy\r\n\r\nDescription: Antiarrythmia\r\n\r\nDescription: Antibiotic\r\n\r\nDescription: Anticonvulsants\r\n\r\nType: Condition\r\n\r\nDescription: Allergies\r\n\r\nDescription: Alzheimer's Disease\r\n\r\nDescription: Angina (Heart Pain)\r\n\r\nDescription: Cataracts\r\n\r\n\r\n--------------------------------\r\nDrugs\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nDrug Name: Aspirin\r\n\r\nSupply: Dialy\r\n\r\nOrig Drug Entry: Aspirin\r\n\r\n\r\n\r\n--------------------------------\r\nPreventive Services\r\n\r\n--------------------------------\r\n\r\nSource: MyMedicare.gov\r\n\r\n\r\n\r\nDescription: DIABETES\r\n\r\nNext Eligible Date: 10/1/2011\r\n\r\nLast Date of Service: \r\n\r\n\r\n\r\nDescription: PAP TEST DR\r\n\r\nNext Eligible Date: 10/1/2011\r\n\r\nLast Date of Service: \r\n\r\n\r\n\r\nDescription: ABDOMINAL AORTIC ANEURYSM\r\n\r\nNext Eligible Date: 7/1/2012\r\n\r\nLast Date of Service: \r\n\r\n\r\n\r\nDescription: ANNUAL WELLNESS VISIT\r\n\r\nNext Eligible Date: 1/1/2013\r\n\r\nLast Date of Service: \r\n\r\n\r\n\r\nDescription: DEPRESSION SCREENING\r\n\r\nNext Eligible Date: 10/14/2012\r\n\r\nLast Date of Service: \r\n\r\n\r\n\r\n--------------------------------\r\nProviders\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nProvider Name: ANY CARE\r\n\r\nProvider Address: 123 Any Rd, Anywhere, MD 99999\r\n\r\nType: NHC\r\n\r\nSpecialty: \r\n\r\nMedicare Provider: Not Available\r\n\r\n\r\n\r\nProvider Name: ANY HOSPITAL1\r\n\r\nProvider Address: 123 Drive, Anywhere, VA 00001\r\n\r\nType: HOS\r\n\r\nSpecialty: \r\n\r\nMedicare Provider: Not Available\r\n\r\nProvider Name: Jane Doe\r\n\r\nProvider Address: 123 Road, Anywhere, VA 00001\r\n\r\nType: PHY\r\n\r\nSpecialty: Other\r\n\r\nMedicare Provider: Not Available\r\n\r\n\r\n\r\n--------------------------------\r\nPharmacies\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nPharmacy Name: PHARMACY, EAST STREET ANYWHERE, DC 00002\r\n\r\nPharmacy Phone: 000-000-0001\r\n\r\n\r\n\r\nPharmacy Name: ANY PHARMACY, WEST STREET ANYWHERE, VA 00001\r\n\r\nPharmacy Phone: 000-000-0002\r\n\r\n\r\n\r\n--------------------------------\r\nPlans\r\n\r\n--------------------------------\r\n\r\nSource: MyMedicare.gov\r\n\r\n\r\n\r\nContract ID/Plan ID: H9999/9999\r\n\r\nPlan Period: 09/01/2011 - current\r\n\r\nPlan Name: A Medicare Plan Plus (HMO)\r\n\r\nMarketing Name: HealthCare Payer\r\n\r\nPlan Address: 123 Any Road Anytown PA 00003\r\n\r\nPlan Type: 3 - Coordinated Care Plan (HMO, PPO, PSO, SNP)\r\n\r\n\r\n\r\nContract ID/Plan ID: S9999/000\r\n\r\nPlan Period: 01/01/2010 - current\r\n\r\nPlan Name: A Medicare Rx Plan (PDP)\r\n\r\nMarketing Name: Another HealthCare Payer\r\n\r\nPlan Address: 123 Any Road Anytown PA 00003\r\n\r\nPlan Type: 11 - Medicare Prescription Drug Plan\r\n\r\n\r\n\r\n--------------------------------\r\nEmployer Subsidy\r\n\r\n--------------------------------\r\n\r\nSource: MyMedicare.gov\r\n\r\n\r\nEmployer Plan: STATE HEALTH BENEFITS PROGRAM\r\n\r\nEmployer Subsidy Start Date: 01/01/2011\r\n\r\nEmployer Subsidy End Date: 12/31/2011\r\n\r\n\r\n--------------------------------\r\nPrimary Insurance\r\n\r\n--------------------------------\r\n\r\nSource: MyMedicare.gov\r\n\r\n\r\n\r\nMSP Type: End stage Renal Disease (ESRD)\r\n\r\nPolicy Number: 1234567890\r\n\r\nInsurer Name: Insurer1\r\n\r\nInsurer Address: PO BOX 0000 Anytown, CO 00002-0000\r\n\r\nEffective Date: 01/01/2011\r\n\r\nTermination Date: 09/30/2011\r\n\r\n\r\n\r\nMSP Type: End stage Renal Disease (ESRD)\r\n\r\nPolicy Number: 12345678901\r\n\r\nInsurer Name: Insurer2\r\n\r\nInsurer Address: 0000 Any ROAD ANYWHERE, VA 00000-0000\r\n\r\nEffective Date: 01/01/2010\r\n\r\nTermination Date: 12/31/2010\r\n\r\n\r\n\r\n--------------------------------\r\nOther Insurance\r\n\r\n--------------------------------\r\n\r\nSource: MyMedicare.gov\r\n\r\n\r\n\r\nMSP Type: \r\n\r\nPolicy Number: 00001\r\n\r\nInsurer Name: Insurer\r\n\r\nInsurer Address: 00 Address STREET ANYWHERE, PA 00000\r\n\r\nEffective Date: 10/01/1984\r\n\r\nTermination Date: 11/30/2008\r\n\r\n\r\n\r\n--------------------------------\r\nClaim Summary\r\n\r\n--------------------------------\r\n\r\nSource: MyMedicare.gov\r\n\r\n\r\n\r\nClaim Number: 1234567890000\r\n\r\nProvider: No Information Available \r\nProvider Billing Address:    \r\n\r\nService Start Date: 10/18/2012\r\n\r\nService End Date: \r\n\r\nAmount Charged: $60.00\r\n\r\nMedicare Approved: $34.00\r\n\r\nProvider Paid: $27.20\r\n\r\nYou May be Billed: $6.80\r\n\r\nClaim Type: PartB\r\n\r\nDiagnosis Code 1: 3534\r\nDiagnosis Code 2: 7393\r\nDiagnosis Code 3: 7392\r\nDiagnosis Code 4: 3533 \r\n\r\n--------------------------------\r\nClaim Lines for Claim Number: 1234567890000\r\n\r\n--------------------------------\r\n\r\n\r\n\r\nLine number:  1\r\n\r\nDate of Service From:  10/18/2012\r\n\r\nDate of Service To:  10/18/2012\r\n\r\nProcedure Code/Description:  98941 - Chiropractic Manipulative Treatment (Cmt); Spinal, Three To Four Regions\r\n\r\nModifier 1/Description:  AT - Acute Treatment (This Modifier Should Be Used When Reporting Service 98940, 98941, 98942)\r\n\r\nModifier 2/Description:  \r\n\r\nModifier 3/Description:  \r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  1\r\n\r\nSubmitted Amount/Charges:  $60.00\r\n\r\nAllowed Amount:  $34.00\r\n\r\nNon-Covered:  $26.00\r\n\r\nPlace of Service/Description:  11 - Office\r\n\r\nType of Service/Description:  1 - Medical Care\r\n\r\nRendering Provider No:  0000001\r\n\r\nRendering Provider NPI:  123456789\r\n\r\n\r\n\r\n--------------------------------\r\n\r\n\r\n\r\n--------------------------------\r\n\r\n\r\n\r\nClaim Number: 12345678900000VAA\r\n\r\nProvider: No Information Available\r\n \r\nProvider Billing Address:    \r\n\r\nService Start Date: 09/22/2012\r\n\r\nService End Date: \r\n\r\nAmount Charged: $504.80\r\n\r\nMedicare Approved: $504.80\r\n\r\nProvider Paid: $126.31\r\n\r\nYou May be Billed: $38.84\r\n\r\nClaim Type: Outpatient\r\n\r\nDiagnosis Code 1: 56400\r\nDiagnosis Code 2: 7245\r\nDiagnosis Code 3: V1588\r\n\r\n--------------------------------\r\nClaim Lines for Claim Number: 12345678900000VAA\r\n\r\n--------------------------------\r\n\r\n\r\n\r\nLine number:  1\r\n\r\nDate of Service From:  09/22/2012\r\n\r\nRevenue Code/Description: 0250 - General Classification PHARMACY\r\n\r\nProcedure Code/Description:  \r\n\r\nModifier 1/Description:  \r\n\r\nModifier 2/Description:  \r\n\r\nModifier 3/Description:  \r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  1\r\n\r\nSubmitted Amount/Charges:  $14.30\r\n\r\nAllowed Amount:  $14.30\r\n\r\nNon-Covered:  $0.00\r\n\r\n\r\n\r\nLine number:  2\r\n\r\nDate of Service From:  09/22/2012\r\n\r\nRevenue Code/Description: 0320 - General Classification DX X-RAY\r\n\r\nProcedure Code/Description:  74020 - Radiologic Examination, Abdomen; Complete, Including Decubitus And/Or Erect Views\r\n\r\nModifier 1/Description:  \r\n\r\nModifier 2/Description:  \r\n\r\nModifier 3/Description:  \r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  1\r\n\r\nSubmitted Amount/Charges:  $175.50\r\n\r\nAllowed Amount:  $175.50\r\n\r\nNon-Covered:  $0.00\r\n\r\n\r\n\r\nLine number:  3\r\n\r\nDate of Service From:  09/22/2012\r\n\r\nRevenue Code/Description: 0450 - General Classification EMERG ROOM\r\n\r\nProcedure Code/Description:  99283 - Emergency Department Visit For The Evaluation And Management Of A Patient, Which Requires Th\r\n\r\nModifier 1/Description:  25 - Significant, Separately Identifiable Evaluation And Management Service By The Same Physician On\r\n\r\nModifier 2/Description:  \r\n\r\nModifier 3/Description:  \r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  1\r\n\r\nSubmitted Amount/Charges:  $315.00\r\n\r\nAllowed Amount:  $315.00\r\n\r\nNon-Covered:  $0.00\r\n\r\n\r\n\r\nLine number:  4\r\n\r\nDate of Service From:  \r\n\r\nRevenue Code/Description: 0001 - Total Charges\r\n\r\nProcedure Code/Description:  \r\n\r\nModifier 1/Description:  \r\n\r\nModifier 2/Description:  \r\n\r\nModifier 3/Description:  \r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  0\r\n\r\nSubmitted Amount/Charges:  $504.80\r\n\r\nAllowed Amount:  $504.80\r\n\r\nNon-Covered:  $0.00\r\n\r\nClaim Number: 1234567890123\r\n\r\nProvider: No Information Available\r\n\r\nProvider Billing Address:    \r\n\r\nService Start Date: 12/01/2012\r\n\r\nService End Date: \r\n\r\nAmount Charged: * Not Available *\r\n\r\nMedicare Approved: * Not Available *\r\n\r\nProvider Paid: * Not Available *\r\n\r\nYou May be Billed: * Not Available *\r\n\r\nClaim Type: PartB\r\n\r\nDiagnosis Code 1: 7392\r\nDiagnosis Code 2: 7241\r\nDiagnosis Code 3: 7393\r\nDiagnosis Code 4: 7391\r\n\r\n--------------------------------\r\nClaim Lines for Claim Number: 1234567890123\r\n\r\n--------------------------------\r\n\r\n\r\n\r\nLine number:  1\r\n\r\nDate of Service From:  12/01/2012\r\n\r\nDate of Service To:  12/01/2012\r\n\r\nProcedure Code/Description:  98941 - Chiropractic Manipulative Treatment, 3 To 4 Spinal Regions\r\n\r\nModifier 1/Description:  GA - Waiver Of Liability Statement Issued As Required By Payer Policy, Individual Case\r\n\r\nModifier 2/Description:  \r\n\r\nModifier 3/Description:  \r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  1\r\n\r\nSubmitted Amount/Charges:  * Not Available *\r\n\r\nAllowed Amount:  * Not Available *\r\n\r\nNon-Covered:  * Not Available *\r\n\r\nPlace of Service/Description:  11 - Office\r\n\r\nType of Service/Description:  1 - Medical Care\r\n\r\nRendering Provider No:  123456\r\n\r\nRendering Provider NPI:  123456789\r\n\r\n\r\n\r\nLine number:  2\r\n\r\nDate of Service From:  12/01/2012\r\n\r\nDate of Service To:  12/01/2012\r\n\r\nProcedure Code/Description:  G0283 - Electrical Stimulation (Unattended), To One Or More Areas For Indication(S) Other Than Wound\r\n\r\nModifier 1/Description:  GY - Item Or Service Statutorily Excluded, Does Not Meet The Definition Of Any Medicare Benefit Or,\r\n\r\nModifier 2/Description:  \r\n\r\nModifier 3/Description:  \r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  1\r\n\r\nSubmitted Amount/Charges:  * Not Available *\r\n\r\nAllowed Amount:  * Not Available *\r\n\r\nNon-Covered:  * Not Available *\r\n\r\nPlace of Service/Description:  11 - Office\r\n\r\nType of Service/Description:  1 - Medical Care\r\n\r\nRendering Provider No:  123456\r\n\r\nRendering Provider NPI:  123456789\r\n\r\n\r\n\r\n--------------------------------\r\nClaim Lines for Claim Number: 123456789012\r\n\r\n--------------------------------\r\n\r\n\r\n\r\nClaim Type: Part D\r\n\r\nClaim Number: 123456789012\r\n\r\nClaim Service Date: 11/17/2011\r\n\r\nPharmacy / Service Provider: 123456789\r\n\r\nPharmacy Name: PHARMACY2 #00000\r\n\r\nDrug Code: 00093013505\r\n\r\nDrug Name: CARVEDILOL\r\n\r\nFill Number: 0\r\n\r\nDays' Supply: 30\r\n\r\nPrescriber Identifer: 123456789\r\n\r\nPrescriber Name: Jane Doe\r\n\r\n\r\n\r\n--------------------------------\r\nClaim Lines for Claim Number: 123456789011\r\n\r\n--------------------------------\r\n\r\n\r\n\r\nClaim Type: Part D\r\n\r\nClaim Number: 123456789011\r\n\r\nClaim Service Date: 11/23/2011\r\n\r\nPharmacy / Service Provider: 1234567890\r\n\r\nPharmacy Name: PHARMACY3 #00000\r\n\r\nDrug Code: 00781223310\r\n\r\nDrug Name: OMEPRAZOLE\r\n\r\nFill Number: 4\r\n\r\nDays' Supply: 30\r\n\r\nPrescriber Identifer: 123456789\r\n\r\nPrescriber Name: Jane Doe\r\n\r\n\r\n\r\n--------------------------------\r\n\r\n\r\n\r\n";
+
+        expect(txtfile).to.exist;
+
+        //convert string into JSON
+        var result = bbcms.parseText(txtfile);
+        expect(result).to.exist;
+
+        var valid = bbm.validator.validateDocumentModel(result);
+
+        if (!valid) {
+            console.log("Errors: \n", JSON.stringify(bbm.validator.getLastError(), null, 4));
+        }
+
+        expect(valid).to.be.true;
+
+        done();
+    });
+
+    it('Extra line breaks before sections', function (done) {
+        var txtfile = "--------------------------------\r\nMYMEDICARE.GOV PERSONAL HEALTH INFORMATION\r\n\r\n--------------------------------\r\n**********CONFIDENTIAL***********\r\n\r\nProduced by the Blue Button (v2.0)\r\n\r\n03/16/2013 5:10 AM\r\n\r\n\r\n\r\n\r\n--------------------------------\r\nDemographic\r\n\r\n--------------------------------\r\n\r\nSource: MyMedicare.gov\r\n\r\n\r\n\r\nName: JOHN DOE\r\n\r\nDate of Birth: 01/01/1910\r\n\r\nAddress Line 1: 123 ANY ROAD\r\n\r\nAddress Line 2: \r\n\r\nCity: ANYTOWN\r\n\r\nState: VA\r\n\r\nZip: 00001\r\n\r\nPhone Number: 123-456-7890\r\n\r\nEmail: JOHNDOE@example.com\r\n\r\nPart A Effective Date: 01/01/2012\r\n\r\nPart B Effective Date: 01/01/2012\r\n\r\n\r\n\r\n--------------------------------\r\nEmergency Contact\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nContact Name: JANE DOE\r\n\r\nAddress Type:Home\r\n\r\nAddress Line 1: 123 AnyWhere St\r\n\r\nAddress Line 2: \r\n\r\nCity: AnyWhere\r\n\r\nState: DC\r\n\r\nZip: 00002-1111\r\n\r\nRelationship: Other\r\n\r\nHome Phone: 123-456-7890\r\n\r\nWork Phone: 000-001-0001\r\n\r\nMobile Phone: 000-001-0002\r\n\r\nEmail Address: JANEDOE@example.com\r\n\r\n\r\n\r\nContact Name: STEVE DOE\r\n\r\nAddress Type:\r\n\r\nAddress Line 1: 123 AnyWhere Rd\r\n\r\nAddress Line 2: \r\n\r\nCity: AnyWhere\r\n\r\nState: VA\r\n\r\nZip: 00001\r\n\r\nRelationship: Other\r\n\r\nHome Phone: 123-456-7890\r\n\r\nWork Phone: 000-001-0001\r\n\r\nMobile Phone: 000-001-0002\r\n\r\nEmail Address: STEVEDOE@example.com\r\n\r\n\r\n\r\n--------------------------------\r\nSelf Reported Medical Conditions\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nCondition Name: Arthritis\r\n\r\nMedical Condition Start Date: 08/09/2005\r\n\r\nMedical Condition End Date: 02/28/2011\r\n\r\n\r\n\r\nCondition Name: Asthma\r\n\r\nMedical Condition Start Date: 01/25/2008\r\n\r\nMedical Condition End Date: 01/25/2010\r\n\r\n\r\n\r\n--------------------------------\r\nSelf Reported Allergies\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nAllergy Name: Antibotic\r\n\r\nType: Drugs\r\n\r\nReaction: Vomiting\r\n\r\nSeverity: Severe\r\n\r\nDiagnosed: Yes\r\n\r\nTreatment: Allergy Shots\r\n\r\nFirst Episode Date: 01/08/1926\r\n\r\nLast Episode Date: 03/13/1955\r\n\r\nLast Treatment Date: 09/28/1949\r\n\r\nComments: Erythromycin \r\n\r\n\r\n\r\nAllergy Name: Grasses\r\n\r\nType: Environmental\r\n\r\nReaction: Sneezing\r\n\r\nSeverity: Custom Severe\r\n\r\nDiagnosed: Yes\r\n\r\nTreatment: Avoidance\r\n\r\nFirst Episode Date: 05/13/1973\r\n\r\nLast Episode Date: 07/20/1996\r\n\r\nLast Treatment Date: 09/27/2008\r\n\r\nComments: \r\n\r\n\r\n\r\n\r\n--------------------------------\r\nSelf Reported Implantable Device\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nDevice Name: Artificial Eye Lenses\r\n\r\nDate Implanted: 1/27/1942\r\n\r\n\r\n\r\n--------------------------------\r\nSelf Reported Immunizations\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nImmunization Name: Varicella/Chicken Pox\r\n\r\nDate Administered:04/21/2002\r\n\r\nMethod: Nasal Spray(mist)\r\n\r\nWere you vaccinated in the US: \r\n\r\nComments: congestion\r\n\r\nBooster 1 Date: 02/02/1990\r\n\r\nBooster 2 Date: \r\n\r\nBooster 3 Date: \r\n\r\n\r\n\r\nImmunization Name: typhoid\r\n\r\nDate Administered:01/02/2009\r\n\r\nMethod: Injection\r\n\r\nWere you vaccinated in the US: \r\n\r\nComments: \r\n\r\nBooster 1 Date: \r\n\r\nBooster 2 Date: \r\n\r\nBooster 3 Date: \r\n\r\n\r\n\r\n--------------------------------\r\nSelf Reported Labs and Tests\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nTest/Lab Type: Glucose Level\r\nDate Taken: 03/21/2008\r\n\r\nAdministered by: AnyLab\r\n\r\nRequesting Doctor: Dr. Smith\r\n\r\nReason Test/Lab Requested: Ongoing elevated glucose\r\n\r\nResults: 135, 170, 150, 120\r\n\r\nComments: Fasting, hour 1, hour 2, hour 3\r\n\r\n\r\n\r\n--------------------------------\r\nSelf Reported Vital Statistics\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nVital Statistic Type: Blood Pressure\r\n\r\nDate: 07/22/2011\r\n\r\nTime: 3:00 PM\r\n\r\nReading: 120/80\r\n\r\nComments: \r\n\r\n\r\n\r\nVital Statistic Type: Glucose\r\n\r\nDate: 03/20/2012\r\n\r\nTime: 12:00 PM\r\n\r\nReading: 110\r\n\r\nComments: \r\n\r\n\r\nVital Statistic Type: Height\r\n\r\nDate: 03/20/2012\r\n\r\nTime: 12:00 PM\r\n\r\nReading: 180\r\n\r\nComments: Height\r\n\r\n\r\n\r\nVital Statistic Type: Weight\r\n\r\nDate: 03/20/2012\r\n\r\nTime: 12:00 PM\r\n\r\nReading: 80\r\n\r\nComments: Weight\r\n\r\n\r\n\r\n--------------------------------\r\nFamily Medical History\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nFamily Member: Brother\r\n\r\nType: \r\n\r\nDOB:1/10/1915\r\n\r\nDOD: \r\n\r\nAge: \r\n\r\nType: Allergy\r\n\r\nDescription: Antiarrythmia\r\n\r\nDescription: Antibiotic\r\n\r\nDescription: Anticonvulsants\r\n\r\nType: Condition\r\n\r\nDescription: Allergies\r\n\r\nDescription: Alzheimer's Disease\r\n\r\nDescription: Angina (Heart Pain)\r\n\r\nDescription: Cataracts\r\n\r\n\r\n--------------------------------\r\nDrugs\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nDrug Name: Aspirin\r\n\r\nSupply: Dialy\r\n\r\nOrig Drug Entry: Aspirin\r\n\r\nLast Treatment Date: 09/28/1949\r\n\r\nComments: Fasting, hour 1, hour 2, hour 3\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n--------------------------------\r\nPreventive Services\r\n\r\n--------------------------------\r\n\r\nSource: MyMedicare.gov\r\n\r\n\r\n\r\nDescription: DIABETES\r\n\r\nNext Eligible Date: 10/1/2011\r\n\r\nLast Date of Service: 10/1/2015\r\n\r\n\r\n\r\nDescription: PAP TEST DR\r\n\r\nNext Eligible Date: 10/1/2011\r\n\r\nLast Date of Service: \r\n\r\n\r\n\r\nDescription: ABDOMINAL AORTIC ANEURYSM\r\n\r\nNext Eligible Date: 7/1/2012\r\n\r\nLast Date of Service: \r\n\r\n\r\n\r\nDescription: ANNUAL WELLNESS VISIT\r\n\r\nNext Eligible Date: 1/1/2013\r\n\r\nLast Date of Service: \r\n\r\n\r\n\r\nDescription: DEPRESSION SCREENING\r\n\r\nNext Eligible Date: 10/14/2012\r\n\r\nLast Date of Service: \r\n\r\n\r\n\r\n--------------------------------\r\nProviders\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nProvider Name: ANY CARE\r\n\r\nProvider Address: 123 Any Rd, Anywhere, MD 99999\r\n\r\nType: NHC\r\n\r\nSpecialty: \r\n\r\nMedicare Provider: Not Available\r\n\r\n\r\n\r\nProvider Name: ANY HOSPITAL1\r\n\r\nProvider Address: 123 Drive, Anywhere, VA 00001\r\n\r\nType: HOS\r\n\r\nSpecialty: \r\n\r\nMedicare Provider: Not Available\r\n\r\nProvider Name: Jane Doe\r\n\r\nProvider Address: 123 Road, Anywhere, VA 00001\r\n\r\nType: PHY\r\n\r\nSpecialty: Other\r\n\r\nMedicare Provider: Not Available\r\n\r\n\r\n\r\n--------------------------------\r\nPharmacies\r\n\r\n--------------------------------\r\n\r\nSource: Self-Entered\r\n\r\n\r\n\r\nPharmacy Name: PHARMACY, EAST STREET ANYWHERE, DC 00002\r\n\r\nPharmacy Phone: 000-000-0001\r\n\r\n\r\n\r\nPharmacy Name: ANY PHARMACY, WEST STREET ANYWHERE, VA 00001\r\n\r\nPharmacy Phone: 000-000-0002\r\n\r\n\r\n\r\n--------------------------------\r\nPlans\r\n\r\n--------------------------------\r\n\r\nSource: MyMedicare.gov\r\n\r\n\r\n\r\nContract ID/Plan ID: H9999/9999\r\n\r\nPlan Period: 09/01/2011 - current\r\n\r\nPlan Name: A Medicare Plan Plus (HMO)\r\n\r\nMarketing Name: HealthCare Payer\r\n\r\nEmail: test@mail.com\r\n\r\nPhone: 13-456-789\r\n\r\nPlan Address: 123 Any Road Anytown PA 00003\r\n\r\nPlan Type: 3 - Coordinated Care Plan (HMO, PPO, PSO, SNP)\r\n\r\n\r\n\r\nContract ID/Plan ID: S9999/000\r\n\r\nPlan Period: 01/01/2010 - current\r\n\r\nPlan Name: A Medicare Rx Plan (PDP)\r\n\r\nMarketing Name: Another HealthCare Payer\r\n\r\nPlan Address: 123 Any Road Anytown PA 00003\r\n\r\nPlan Type: 11 - Medicare Prescription Drug Plan\r\n\r\n\r\n\r\n--------------------------------\r\nEmployer Subsidy\r\n\r\n--------------------------------\r\n\r\nSource: MyMedicare.gov\r\n\r\n\r\nEmployer Plan: STATE HEALTH BENEFITS PROGRAM\r\n\r\nEmployer Subsidy Start Date: 01/01/2011\r\n\r\nEmployer Subsidy End Date: 12/31/2011\r\n\r\n\r\n--------------------------------\r\nPrimary Insurance\r\n\r\n--------------------------------\r\n\r\nSource: MyMedicare.gov\r\n\r\n\r\n\r\nMSP Type: End stage Renal Disease (ESRD)\r\n\r\nPolicy Number: 1234567890\r\n\r\nInsurer Name: Insurer1\r\n\r\nInsurer Address: PO BOX 0000 Anytown, CO 00002-0000\r\n\r\nEffective Date: 01/01/2011\r\n\r\nTermination Date: 09/30/2011\r\n\r\n\r\n\r\nMSP Type: End stage Renal Disease (ESRD)\r\n\r\nPolicy Number: 12345678901\r\n\r\nInsurer Name: Insurer2\r\n\r\nInsurer Address: 0000 Any ROAD ANYWHERE, VA 00000-0000\r\n\r\nEffective Date: 01/01/2010\r\n\r\nTermination Date: 12/31/2010\r\n\r\n\r\n\r\n--------------------------------\r\nOther Insurance\r\n\r\n--------------------------------\r\n\r\nSource: MyMedicare.gov\r\n\r\n\r\n\r\nMSP Type: \r\n\r\nPolicy Number: 00001\r\n\r\nInsurer Name: Insurer\r\n\r\nInsurer Address: 00 Address STREET ANYWHERE, PA 00000\r\n\r\nEffective Date: 10/01/1984\r\n\r\nTermination Date: 11/30/2008\r\n\r\n\r\n\r\nMSP Type: 290\r\n\r\nPolicy Number: 00125\r\n\r\nInsurer Name: CAREFIRST DC (PART A ONLY)\r\n\r\nInsurer Address: 10455 MILL RUN CIRCLE OWING MILLS, MD 21117\r\n\r\nEffective Date: 01/08/1995\r\n\r\nTermination Date: \r\n\r\n\r\n--------------------------------\r\nClaim Summary\r\n\r\n--------------------------------\r\n\r\nSource: MyMedicare.gov\r\n\r\n\r\n\r\nClaim Number: 1234567890000\r\n\r\nProvider: No Information Available \r\nProvider Billing Address:    \r\n\r\nService Start Date: 10/18/2012\r\n\r\nService End Date: \r\n\r\nAmount Charged: $60.00\r\n\r\nMedicare Approved: $34.00\r\n\r\nProvider Paid: $27.20\r\n\r\nYou May be Billed: $6.80\r\n\r\nClaim Type: PartB\r\n\r\nDiagnosis Code 1: 3534\r\nDiagnosis Code 2: 7393\r\nDiagnosis Code 3: 7392\r\nDiagnosis Code 4: 3533 \r\n\r\n--------------------------------\r\nClaim Lines for Claim Number: 1234567890000\r\n\r\n--------------------------------\r\n\r\n\r\n\r\nLine number:  1\r\n\r\nDate of Service From:  10/18/2012\r\n\r\nDate of Service To:  10/18/2012\r\n\r\nProcedure Code/Description:  98941 - Chiropractic Manipulative Treatment (Cmt); Spinal, Three To Four Regions\r\n\r\nModifier 1/Description:  AT - Acute Treatment (This Modifier Should Be Used When Reporting Service 98940, 98941, 98942)\r\n\r\nModifier 2/Description:  GP - Services Delivered Under An Outpatient Physical Therapy Plan Of Care\r\n\r\nModifier 3/Description:  CI - At Least 1 Percent But Less Than 20 Percent Impaired, Limited Or Restricted\r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  1\r\n\r\nSubmitted Amount/Charges:  $60.00\r\n\r\nAllowed Amount:  $34.00\r\n\r\nNon-Covered:  * Not Available *\r\n\r\nPlace of Service/Description:  11 - Office\r\n\r\nType of Service/Description:  1 - Medical Care\r\n\r\nRendering Provider No:  0000001\r\n\r\nRendering Provider NPI:  123456789\r\n\r\n\r\n\r\nLine number:  2\r\n\r\nDate of Service From:  06/10/2015\r\n\r\nDate of Service To:  06/10/2015\r\n\r\nProcedure Code/Description:  G8907 - Patient Documented Not To Have Experienced Any Of The Following Events: A Burn Prior To Disc\r\n\r\nModifier 1/Description:  \r\n\r\nModifier 2/Description:  \r\n\r\nModifier 3/Description:  \r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  1\r\n\r\nSubmitted Amount/Charges:  * Not Available *\r\n\r\nAllowed Amount:  * Not Available *\r\n\r\nNon-Covered:  * Not Available *\r\n\r\nPlace of Service/Description:  24 - Ambulatory  Surgical Center\r\n\r\nType of Service/Description:  F - Ambulatory Surgical Center\r\n\r\nRendering Provider No:  A01234\r\n\r\nRendering Provider NPI:  1871238456\r\n\r\n\r\n\r\nLine number:  3\r\n\r\nDate of Service From:  06/10/2015\r\n\r\nDate of Service To:  06/10/2015\r\n\r\nProcedure Code/Description:  G8918 - Patient Without Preoperative Order For Iv Antibiotic Surgical Site Infection (Ssi) Prophylax\r\n\r\nModifier 1/Description:  \r\n\r\nModifier 2/Description:  \r\n\r\nModifier 3/Description:  \r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  1\r\n\r\nSubmitted Amount/Charges:  * Not Available *\r\n\r\nAllowed Amount:  * Not Available *\r\n\r\nNon-Covered:  * Not Available *\r\n\r\nPlace of Service/Description:  24 - Ambulatory  Surgical Center\r\n\r\nType of Service/Description:  F - Ambulatory Surgical Center\r\n\r\nRendering Provider No:  A0987654\r\n\r\nRendering Provider NPI:  1098765429\r\n\r\n\r\n\r\n--------------------------------\r\n\r\n\r\n\r\n--------------------------------\r\n\r\n\r\n\r\nClaim Number: 12345678900000VAA\r\n\r\nProvider: No Information Available\r\n \r\nProvider Billing Address:    \r\n\r\nService Start Date: 09/22/2012\r\n\r\nService End Date: \r\n\r\nAmount Charged: $504.80\r\n\r\nMedicare Approved: $504.80\r\n\r\nProvider Paid: $126.31\r\n\r\nYou May be Billed: $38.84\r\n\r\nClaim Type: Outpatient\r\n\r\nDiagnosis Code 1: 56400\r\nDiagnosis Code 2: 7245\r\nDiagnosis Code 3: V1588\r\n\r\n--------------------------------\r\nClaim Lines for Claim Number: 12345678900000VAA\r\n\r\n--------------------------------\r\n\r\n\r\n\r\nLine number:  1\r\n\r\nDate of Service From:  09/22/2012\r\n\r\nRevenue Code/Description: 0250 - General Classification PHARMACY\r\n\r\nProcedure Code/Description:  \r\n\r\nModifier 1/Description:  \r\n\r\nModifier 2/Description:  \r\n\r\nModifier 3/Description:  \r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  1\r\n\r\nSubmitted Amount/Charges:  $14.30\r\n\r\nAllowed Amount:  $14.30\r\n\r\nNon-Covered:  $0.00\r\n\r\n\r\n\r\nLine number:  2\r\n\r\nDate of Service From:  09/22/2012\r\n\r\nRevenue Code/Description: 0320 - General Classification DX X-RAY\r\n\r\nProcedure Code/Description:  74020 - Radiologic Examination, Abdomen; Complete, Including Decubitus And/Or Erect Views\r\n\r\nModifier 1/Description:  \r\n\r\nModifier 2/Description:  \r\n\r\nModifier 3/Description:  \r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  1\r\n\r\nSubmitted Amount/Charges:  $175.50\r\n\r\nAllowed Amount:  $175.50\r\n\r\nNon-Covered:  $0.00\r\n\r\n\r\n\r\nLine number:  3\r\n\r\nDate of Service From:  09/22/2012\r\n\r\nRevenue Code/Description: 0450 - General Classification EMERG ROOM\r\n\r\nProcedure Code/Description:  99283 - Emergency Department Visit For The Evaluation And Management Of A Patient, Which Requires Th\r\n\r\nModifier 1/Description:  25 - Significant, Separately Identifiable Evaluation And Management Service By The Same Physician On\r\n\r\nModifier 2/Description:  \r\n\r\nModifier 3/Description:  \r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  1\r\n\r\nSubmitted Amount/Charges:  $315.00\r\n\r\nAllowed Amount:  $315.00\r\n\r\nNon-Covered:  $0.00\r\n\r\n\r\n\r\nLine number:  4\r\n\r\nDate of Service From:  \r\n\r\nRevenue Code/Description: 0001 - Total Charges\r\n\r\nProcedure Code/Description:  \r\n\r\nModifier 1/Description:  \r\n\r\nModifier 2/Description:  \r\n\r\nModifier 3/Description:  \r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  0\r\n\r\nSubmitted Amount/Charges:  $504.80\r\n\r\nAllowed Amount:  $504.80\r\n\r\nNon-Covered:  $0.00\r\n\r\nClaim Number: 1234567890123\r\n\r\nProvider: No Information Available\r\n\r\nProvider Billing Address:    \r\n\r\nService Start Date: 12/01/2012\r\n\r\nService End Date: \r\n\r\nAmount Charged: * Not Available *\r\n\r\nMedicare Approved: * Not Available *\r\n\r\nProvider Paid: * Not Available *\r\n\r\nYou May be Billed: * Not Available *\r\n\r\nClaim Type: PartB\r\n\r\nDiagnosis Code 1: 7392\r\nDiagnosis Code 2: 7241\r\nDiagnosis Code 3: 7393\r\nDiagnosis Code 4: 7391\r\n\r\n--------------------------------\r\nClaim Lines for Claim Number: 1234567890123\r\n\r\n--------------------------------\r\n\r\n\r\n\r\nLine number:  1\r\n\r\nDate of Service From:  12/01/2012\r\n\r\nDate of Service To:  12/01/2012\r\n\r\nProcedure Code/Description:  98941 - Chiropractic Manipulative Treatment, 3 To 4 Spinal Regions\r\n\r\nModifier 1/Description:  GA - Waiver Of Liability Statement Issued As Required By Payer Policy, Individual Case\r\n\r\nModifier 2/Description:  \r\n\r\nModifier 3/Description:  \r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  1\r\n\r\nSubmitted Amount/Charges:  * Not Available *\r\n\r\nAllowed Amount:  * Not Available *\r\n\r\nNon-Covered:  * Not Available *\r\n\r\nPlace of Service/Description:  11 - Office\r\n\r\nType of Service/Description:  1 - Medical Care\r\n\r\nRendering Provider No:  123456\r\n\r\nRendering Provider NPI:  123456789\r\n\r\n\r\n\r\nLine number:  2\r\n\r\nDate of Service From:  12/01/2012\r\n\r\nDate of Service To:  12/01/2012\r\n\r\nProcedure Code/Description:  G0283 - Electrical Stimulation (Unattended), To One Or More Areas For Indication(S) Other Than Wound\r\n\r\nModifier 1/Description:  GY - Item Or Service Statutorily Excluded, Does Not Meet The Definition Of Any Medicare Benefit Or,\r\n\r\nModifier 2/Description:  \r\n\r\nModifier 3/Description:  \r\n\r\nModifier 4/Description:  \r\n\r\nQuantity Billed/Units:  1\r\n\r\nSubmitted Amount/Charges:  * Not Available *\r\n\r\nAllowed Amount:  * Not Available *\r\n\r\nNon-Covered:  * Not Available *\r\n\r\nPlace of Service/Description:  11 - Office\r\n\r\nType of Service/Description:  1 - Medical Care\r\n\r\nRendering Provider No:  123456\r\n\r\nRendering Provider NPI:  123456789\r\n\r\n\r\n\r\n--------------------------------\r\nClaim Lines for Claim Number: 123456789012\r\n\r\n--------------------------------\r\n\r\n\r\n\r\nClaim Type: Part D\r\n\r\nClaim Number: 123456789012\r\n\r\nClaim Service Date: 11/17/2011\r\n\r\nPharmacy / Service Provider: 123456789\r\n\r\nPharmacy Name: PHARMACY2 #00000\r\n\r\nDrug Code: 00093013505\r\n\r\nDrug Name: CARVEDILOL\r\n\r\nFill Number: 0\r\n\r\nDays' Supply: 30\r\n\r\nPrescriber Identifer: 123456789\r\n\r\nPrescriber Name: Jane Doe\r\n\r\n\r\n\r\n--------------------------------\r\nClaim Lines for Claim Number: 123456789011\r\n\r\n--------------------------------\r\n\r\n\r\n\r\nClaim Type: Part D\r\n\r\nClaim Number: 123456789011\r\n\r\nClaim Service Date: 11/23/2011\r\n\r\nPharmacy / Service Provider: 1234567890\r\n\r\nPharmacy Name: PHARMACY3 #00000\r\n\r\nDrug Code: 00781223310\r\n\r\nDrug Name: OMEPRAZOLE\r\n\r\nFill Number: 4\r\n\r\nDays' Supply: 30\r\n\r\nPrescriber Identifer: 123456789\r\n\r\nPrescriber Name: Jane Doe\r\n\r\n\r\n\r\n--------------------------------\r\n\r\n\r\n\r\n";
+
+        expect(txtfile).to.exist;
+
+        //convert string into JSON
+        var result = bbcms.parseText(txtfile);
+        expect(result).to.exist;
+
+        var valid = bbm.validator.validateDocumentModel(result);
+
+        if (!valid) {
+            console.log("Errors: \n", JSON.stringify(bbm.validator.getLastError(), null, 4));
+        }
+
+        expect(valid).to.be.true;
+
+        done();
+    });
+});
+
+},{"../index":1,"blue-button-model":20,"chai":56}]},{},[97,98]);

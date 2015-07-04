@@ -167,7 +167,7 @@ Type: Environmental
 
 Reaction: Sneezing
 
-Severity: Severe
+Severity: Custom Severe
 
 Diagnosed: Yes
 
@@ -300,6 +300,29 @@ Reading: 110
 Comments: 
 
 
+Vital Statistic Type: Height
+
+Date: 03/20/2012
+
+Time: 12:00 PM
+
+Reading: 180
+
+Comments: Height
+
+
+
+Vital Statistic Type: Weight
+
+Date: 03/20/2012
+
+Time: 12:00 PM
+
+Reading: 80
+
+Comments: Weight
+
+
 
 --------------------------------
 Family Medical History
@@ -354,6 +377,10 @@ Supply: Dialy
 
 Orig Drug Entry: Aspirin
 
+Last Treatment Date: 09/28/1949
+
+Comments: Fasting, hour 1, hour 2, hour 3
+
 
 
 
@@ -374,7 +401,7 @@ Description: DIABETES
 
 Next Eligible Date: 10/1/2011
 
-Last Date of Service: 
+Last Date of Service: 10/1/2015
 
 
 
@@ -491,6 +518,10 @@ Plan Name: A Medicare Plan Plus (HMO)
 
 Marketing Name: HealthCare Payer
 
+Email: test@mail.com
+
+Phone: 13-456-789
+
 Plan Address: 123 Any Road Anytown PA 00003
 
 Plan Type: 3 - Coordinated Care Plan (HMO, PPO, PSO, SNP)
@@ -586,6 +617,19 @@ Termination Date: 11/30/2008
 
 
 
+MSP Type: 290
+
+Policy Number: 00125
+
+Insurer Name: CAREFIRST DC (PART A ONLY)
+
+Insurer Address: 10455 MILL RUN CIRCLE OWING MILLS, MD 21117
+
+Effective Date: 01/08/1995
+
+Termination Date: 
+
+
 --------------------------------
 Claim Summary
 
@@ -636,9 +680,9 @@ Procedure Code/Description:  98941 - Chiropractic Manipulative Treatment (Cmt); 
 
 Modifier 1/Description:  AT - Acute Treatment (This Modifier Should Be Used When Reporting Service 98940, 98941, 98942)
 
-Modifier 2/Description:  
+Modifier 2/Description:  GP - Services Delivered Under An Outpatient Physical Therapy Plan Of Care
 
-Modifier 3/Description:  
+Modifier 3/Description:  CI - At Least 1 Percent But Less Than 20 Percent Impaired, Limited Or Restricted
 
 Modifier 4/Description:  
 
@@ -648,7 +692,7 @@ Submitted Amount/Charges:  $60.00
 
 Allowed Amount:  $34.00
 
-Non-Covered:  $26.00
+Non-Covered:  * Not Available *
 
 Place of Service/Description:  11 - Office
 
@@ -657,6 +701,74 @@ Type of Service/Description:  1 - Medical Care
 Rendering Provider No:  0000001
 
 Rendering Provider NPI:  123456789
+
+
+
+Line number:  2
+
+Date of Service From:  06/10/2015
+
+Date of Service To:  06/10/2015
+
+Procedure Code/Description:  G8907 - Patient Documented Not To Have Experienced Any Of The Following Events: A Burn Prior To Disc
+
+Modifier 1/Description:  
+
+Modifier 2/Description:  
+
+Modifier 3/Description:  
+
+Modifier 4/Description:  
+
+Quantity Billed/Units:  1
+
+Submitted Amount/Charges:  * Not Available *
+
+Allowed Amount:  * Not Available *
+
+Non-Covered:  * Not Available *
+
+Place of Service/Description:  24 - Ambulatory  Surgical Center
+
+Type of Service/Description:  F - Ambulatory Surgical Center
+
+Rendering Provider No:  A01234
+
+Rendering Provider NPI:  1871238456
+
+
+
+Line number:  3
+
+Date of Service From:  06/10/2015
+
+Date of Service To:  06/10/2015
+
+Procedure Code/Description:  G8918 - Patient Without Preoperative Order For Iv Antibiotic Surgical Site Infection (Ssi) Prophylax
+
+Modifier 1/Description:  
+
+Modifier 2/Description:  
+
+Modifier 3/Description:  
+
+Modifier 4/Description:  
+
+Quantity Billed/Units:  1
+
+Submitted Amount/Charges:  * Not Available *
+
+Allowed Amount:  * Not Available *
+
+Non-Covered:  * Not Available *
+
+Place of Service/Description:  24 - Ambulatory  Surgical Center
+
+Type of Service/Description:  F - Ambulatory Surgical Center
+
+Rendering Provider No:  A0987654
+
+Rendering Provider NPI:  1098765429
 
 
 
