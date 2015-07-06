@@ -73,17 +73,17 @@ function putDataInBBModel(key, parsedSection, bbDocumentModel) {
     if (key in bbDocumentModel) {
         if (bbDocumentModel[key] instanceof Array) {
             if (parsedSection instanceof Array) {
-                for (var x in parsedSection) {
-                    bbDocumentModel[key].push(parsedSection[x]);
-                }
+                parsedSection.forEach(function (x) {
+                    bbDocumentModel[key].push(x);
+                });
             } else {
                 bbDocumentModel[key].push(parsedSection);
             }
         } else if (typeof bbDocumentModel[key] === 'object') {
             if (parsedSection instanceof Array) {
-                for (var y in parsedSection) {
-                    bbDocumentModel[key] = parsedSection[y];
-                }
+                parsedSection.forEach(function (x) {
+                    bbDocumentModel[key] = x;
+                });
             }
         }
     } else if ('data' in bbDocumentModel) {
@@ -133,8 +133,8 @@ function convertToBBModel(intermediateObj) {
     }
 
     /*might want to do some alerting to see which section to process again, based
-  on what kind of information there is left. For instance, allergies has
-  treatments and one of them has a drug in it. */
+     on what kind of information there is left. For instance, allergies has
+     treatments and one of them has a drug in it. */
 
     //for now, just process the allergy section.
 
@@ -156558,7 +156558,7 @@ function processReactions(childObj) {
     var reactionObj = {};
 
     /*on the assumption that cms does use these quantifiers. so far, only severe
-    has been seen in the sample file */
+     has been seen in the sample file */
 
     // from http://schemes.caregraf.info/snomed
     var severityDict = {
@@ -156633,6 +156633,7 @@ function parseAllergyChild(rawChildObj) {
     var dateArray = {};
     var date;
     for (var key in rawChildObj) {
+
         key = key.toLowerCase();
         var value = rawChildObj[key];
         if (key.indexOf('first episode date') >= 0) {
@@ -156671,13 +156672,18 @@ function parseAllergies(sectionObj) {
     //setup templates for common function
 
     /*apply special functions to allergies, take out the fields from original cms
-  parser, store them in an intermediary object.*/
+     parser, store them in an intermediary object.*/
 
     var specialResult = {};
     var result = [];
     var child;
 
     for (var key in sectionObj) {
+
+        if (typeof (sectionObj[key]) === "function") {
+            continue;
+        }
+
         var obj = parseAllergyChild(sectionObj[key]);
         result.push(obj);
     }
@@ -156726,11 +156732,17 @@ function extrapolateDatesFromLines(claimLines, returnChildObj) {
             pointTime = returnChildObj.date_time.point;
         }
     }
+
     for (var x in claimLines) {
+
+        if (typeof (claimLines[x]) === "function") {
+            continue;
+        }
+
         var claimLineObj = claimLines[x];
         if (claimLineObj.date_time) {
             /*if the main claim body has undefined dates, populate it with
-            claim lines date */
+             claim lines date */
             if (claimLineObj.date_time.low && lowTime === undefined) {
                 lowTime = claimLineObj.date_time.low;
             }
@@ -156794,6 +156806,7 @@ function extrapolatePerformersFromClaimLines(claimLines, returnChildObj) {
             uniquePerformerObj[uniqueKey] = claimLines[i].performers[j];
         }
     }
+
     for (i in uniquePerformerObj) {
         uniquePerformerArr.push(uniquePerformerObj[i]);
     }
@@ -156817,11 +156830,17 @@ function processClaimLine(claimLines) {
     var performerObj = {};
     var performerIdentifierArray = [];
     for (var key in claimLines) {
+
+        if (typeof (claimLines[key]) === "function") {
+            continue;
+        }
+
         var value = claimLines[key];
         key = key.toLowerCase();
         ignoreValue = commonFunctions.getFunction('ignore');
         if (ignoreValue(value)) {
             continue;
+
         } else if (key.indexOf('line number') >= 0 && value.length >= 0) {
             claimLineObj.line = value;
         } else if (key.indexOf('date of service from') >= 0 && value.length >= 0) {
@@ -156907,7 +156926,7 @@ function parseClaimChild(childObj) {
     var typeArray = [];
     var diagnosisArray = [];
     /* for now, this isn't utilized because sample file didn't specify how
-    provider names/addresses really look */
+     provider names/addresses really look */
     var performerObj = {};
     var value;
     var claimLineObj;
@@ -156956,6 +156975,11 @@ function parseClaimChild(childObj) {
             var claimLineArray = value;
             var processedClaimLines = [];
             for (var x in claimLineArray) {
+
+                if (typeof (claimLineArray[x]) === "function") {
+                    continue;
+                }
+
                 claimLineObj = processClaimLine(claimLineArray[x]);
                 processedClaimLines.push(claimLineObj);
             }
@@ -156999,12 +157023,13 @@ function parseClaimLineTypeD(childObj) {
     var performerArray = [];
     var claimLineObj = {};
     /*Okay we decided that providers = performers, so I'm parsing both of the
-    pharmacy service provider and the prescriber as performers, with each of them
-    having the type attribute set to either prescriber or provider/pharmacy
-    */
+     pharmacy service provider and the prescriber as performers, with each of them
+     having the type attribute set to either prescriber or provider/pharmacy
+     */
     var pharmacyObj = {};
     var prescriberObj = {};
     for (var key in childObj) {
+
         var value = childObj[key];
         key = key.toLowerCase();
         if (ignoreValue(value)) {
@@ -157055,8 +157080,8 @@ function parseClaimTypeD(childObj) {
     var claimLineArr = childObj.claimLines;
 
     /* so each claim type d doesn't have a main claim type body, so I'm extracting some
-    elements from the claim line and populating the body with information from the claim lines
-    */
+     elements from the claim line and populating the body with information from the claim lines
+     */
     var parsedChild = parseClaimChild(claimLineArr[0]);
     //Next parse all other claim lines
     for (var x = 0; x < claimLineArr.length; x++) {
@@ -157072,16 +157097,21 @@ function parseClaimTypeD(childObj) {
 }
 
 function parseClaims(intObj, sectionType) {
-    //console.log(intObj);
     var result = [];
 
     for (var key in intObj) {
+
+        if (typeof (intObj[key]) === "function") {
+            continue;
+        }
+
         var child = intObj[key];
+
         var parsedChild;
         /*right now, it seems like the text file puts type D medication claims
-        as a claim numbers. So at this point, we HAVE to check if the typeD
-        is in claims and pull it out to the top level of claims, and process
-        typeD sections separately. */
+         as a claim numbers. So at this point, we HAVE to check if the typeD
+         is in claims and pull it out to the top level of claims, and process
+         typeD sections separately. */
         if (isClaimTypeD(child)) {
             parsedChild = parseClaimTypeD(child);
         } else {
@@ -157601,6 +157631,11 @@ function parseDemographics(intObj) {
     };
 
     for (var key in intObj) {
+
+        if (typeof (intObj[key]) === "function") {
+            continue;
+        }
+
         key = key.toLowerCase();
         var value = intObj[key];
         //convert key to bbModel Key
@@ -157718,6 +157753,11 @@ function getDates(child) {
     }
     var boosterNum = 1;
     for (var key in child) {
+
+        if (typeof (child[key]) === "function") {
+            continue;
+        }
+
         if (key.toLowerCase().indexOf('booster') >= 0 && child[key].length > 0) {
             dateObj = parseDate(child[key]);
             var boosterKey = 'booster ' + boosterNum;
@@ -157733,17 +157773,27 @@ function parseImmunizations(sectionObj) {
     //Again, there's no need to use the shared parser, because immunizations is too
     //specific
     /*apply special functions to medications, take out the fields from original cms
-  parser, store them in an intermediary object.*/
+     parser, store them in an intermediary object.*/
     var specialResult = {};
     var specialIndex = 0;
     var result = [];
     //combine the two results together
     for (var x in sectionObj) {
+
+        if (typeof (sectionObj[x]) === "function") {
+            continue;
+        }
+
         var child = sectionObj[x];
         if (Object.keys(child).length > 1) { //get the dates for each object
             var dates = getDates(child);
             var immObj = {};
             for (var dateKey in dates) {
+
+                if (typeof (dates[dateKey]) === "function") {
+                    continue;
+                }
+
                 immObj = getImmunObj(child, dateKey, dates[dateKey]);
                 result.push(immObj);
             }
@@ -157775,7 +157825,6 @@ function processMedicarePlanChild(childObj) {
 
     var tmpInsurerData = {};
     for (var key in childObj) {
-
         key = key.toLowerCase();
         var value = childObj[key];
 
@@ -158050,6 +158099,11 @@ function parseInsurance(intObj, sectionType) {
     var result = [];
     var resultChild;
     for (var x in intObj) {
+
+        if (typeof (intObj[x]) === "function") {
+            continue;
+        }
+
         var child = intObj[x];
         if (sectionType.indexOf('plans') >= 0) {
             resultChild = processMedicarePlanChild(child);
@@ -158242,19 +158296,29 @@ function parseMedications(sectionObj) {
     //setup templates for common function
 
     /*apply special functions to medications, take out the fields from original cms
-  parser, store them in an intermediary object.*/
+     parser, store them in an intermediary object.*/
 
     //console.log(sectionObj);
 
     var result = [];
     var child;
     /*Ultimately, this code is for the sole purpose of rerunning medications
-  code on allergies */
+     code on allergies */
     var productKeys = ['drug name', 'comments'];
     for (var key in sectionObj) {
+
+        if (typeof (sectionObj[key]) === "function") {
+            continue;
+        }
+
         child = sectionObj[key];
         var parsedObj = {};
         for (var x in productKeys) {
+
+            if (typeof (productKeys[x]) === "function") {
+                continue;
+            }
+
             var productKey = productKeys[x];
             if (productKey in child && child[productKey].length > 0) {
                 var resultType = child[productKey].toLowerCase();
@@ -158285,7 +158349,7 @@ function parseMedications(sectionObj) {
                 result.push(parsedObj);
             }
             /*be selective about what sections you want to pass into shared parser
-       you don't want to pass a section with a blank entry for comments. */
+             you don't want to pass a section with a blank entry for comments. */
             if (productKey in child && child[productKey].length <= 0) {
                 delete sectionObj[key];
             }
@@ -158335,6 +158399,11 @@ function parsePlanOfCare(intObj) {
     //setup templates for common function
     var result = [];
     for (var key in intObj) {
+
+        if (typeof (intObj[key]) === "function") {
+            continue;
+        }
+
         var obj = processPlanOfCareChild(intObj[key]);
         result.push(obj);
     }
@@ -158387,6 +158456,11 @@ function parseProblems(intObj) {
     //setup templates for common function
     var result = [];
     for (var key in intObj) {
+
+        if (typeof (intObj[key]) === "function") {
+            continue;
+        }
+
         var obj = processProblemChild(intObj[key]);
         result.push(obj);
     }
@@ -158405,6 +158479,7 @@ function processProviderChild(rawChildObj) {
     var childObj = {};
     var dateArray = {};
     for (var key in rawChildObj) {
+
         var value = rawChildObj[key];
 
         var ignoreValue = commonFunctions.getFunction('ignore');
@@ -158412,7 +158487,7 @@ function processProviderChild(rawChildObj) {
             continue;
         }
         /* need to be able to discern between individuals vs organization
-        health care provider */
+         health care provider */
         else if (key.indexOf('provider name') >= 0) {
             childObj.name = value;
         } else if (key.indexOf('provider address') >= 0) {
@@ -158428,15 +158503,15 @@ function processProviderChild(rawChildObj) {
         else if (key.indexOf('specialty') >= 0) {
 
             /*means that this field is defined, then the provider is a person, so
-            transform the original name field into a person object, populate the
-            cda_name field and delete the generic name field in the top level
-            */
+             transform the original name field into a person object, populate the
+             cda_name field and delete the generic name field in the top level
+             */
             childObj.name = commonFunctions.getFunction('cda_name')(childObj.name);
             childObj.ind_flag = true;
         }
 
         /*this needs to be worked on, because there could be no samples that had
-        this field populated. */
+         this field populated. */
         else if (key.indexOf('medicare provider') >= 0) {
             var organization = {};
             organization.name = value;
@@ -158465,6 +158540,11 @@ function parseProviders(intObj) {
     //setup templates for common function
     var result = [];
     for (var key in intObj) {
+
+        if (typeof (intObj[key]) === "function") {
+            continue;
+        }
+
         var obj = processProviderChild(intObj[key]);
         result.push(obj);
     }
@@ -158503,6 +158583,11 @@ function processGlucoseLevels(childObj) {
     var dateObj = parseDate(dateVal);
     var units = 'mg/dL'; //these are the default units
     for (var x in glucoseLevels) {
+
+        if (typeof (glucoseLevels[x]) === "function") {
+            continue;
+        }
+
         var result = {};
         result.date_time = {
             "point": dateObj
@@ -158535,6 +158620,11 @@ function processCBC(childObj) {
     var dateObj = parseDate(dateVal);
     var unit;
     for (var x in measurements) {
+
+        if (typeof (measurements[x]) === "function") {
+            continue;
+        }
+
         var result = {};
         result.date_time = {
             "point": dateObj
@@ -158558,15 +158648,26 @@ function processResultsChild(rawChild) {
     //apply special function for glucose first, don't loop through
     var resultKey = 'test/lab type';
     if (resultKey in rawChild) {
+
         var resultType = rawChild[resultKey].toLowerCase();
         if (resultType.indexOf('glucose') >= 0) {
             resultObjs = processGlucoseLevels(rawChild);
             for (key in resultObjs) {
+
+                if (typeof (resultObjs[key]) === "function") {
+                    continue;
+                }
+
                 resultArray.push(resultObjs[key]);
             }
         } else if (resultType.indexOf('cbc') >= 0) {
             resultObjs = processCBC(rawChild);
             for (key in resultObjs) {
+
+                if (typeof (resultObjs[key]) === "function") {
+                    continue;
+                }
+
                 resultArray.push(resultObjs[key]);
             }
         }
@@ -158590,13 +158691,18 @@ function processResultsChild(rawChild) {
 function parseResults(sectionObj) {
 
     /*apply special functions to allergies, take out the fields from original cms
-  parser, store them in an intermediary object.*/
+     parser, store them in an intermediary object.*/
 
     var result = [];
     var child;
     var specialIndex = 0;
     //Ultimately, this section will be used to parse results into different sections
     for (var key in sectionObj) {
+
+        if (typeof (sectionObj[key]) === "function") {
+            continue;
+        }
+
         var rawChild = sectionObj[key];
         var obj = processResultsChild(rawChild);
         result.push(obj);
@@ -158621,7 +158727,7 @@ var parseCodedEntry = commonFunctions.getFunction('cda_coded_entry');
 //type of units it is. Also should be given the value as well later.
 function getVitalUnits(vitalType) {
     /*for height and weight, you need some kind of realistic numberical evaluator to
-    determine the weight and height units */
+     determine the weight and height units */
     if (vitalType.toLowerCase() === 'blood pressure') {
         return 'mm[Hg]';
     } else if (vitalType.toLowerCase().indexOf('glucose') >= 0) {
@@ -158710,13 +158816,18 @@ function parseVitals(sectionObj) {
     var specialIndex = 0;
     var result = []; //aka section, results array
     for (var key in sectionObj) {
+
+        if (typeof (sectionObj[key]) === "function") {
+            continue;
+        }
+
         var rawChild = sectionObj[key];
         var childObj = {};
         if (Object.keys(rawChild).length > 1) {
             childObj = parseVitalsChild(rawChild);
             /*This is for blood pressure/values separated with slashes and to process numbers
-            as values. Parse blood pressure(diastolic and systolic) as two objects, copy duplicate
-            */
+             as values. Parse blood pressure(diastolic and systolic) as two objects, copy duplicate
+             */
             if (childObj.value.indexOf('/') >= 0 &&
                 childObj.vital.name.toLowerCase().indexOf('blood pressure') >= 0) {
                 var numbersArray = childObj.value.split('/');
@@ -158741,7 +158852,7 @@ function parseVitals(sectionObj) {
             }
         }
         /*be selective about what sections you want to pass into shared parser
-       you don't want to pass a section with a blank entry for comments. */
+         you don't want to pass a section with a blank entry for comments. */
     }
     //check to make sure that there isn't any bad entries, clean up
     return result;
