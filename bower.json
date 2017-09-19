@@ -1,6 +1,6 @@
 {
     "name": "blue-button-cms",
-    "version": "1.5.1",
+    "version": "1.5.2",
     "main": "dist/blue-button-cms.js",
     "license": "Apache-2.0",
     "ignore": ["**/*", "!dist/*", "!bower.json", "!package.json", "!LICENSE"]
