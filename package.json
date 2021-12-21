@@ -1,8 +1,8 @@
 {
   "name": "blue-button-cms",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "description": "Blue Button CMS Parser",
-  "main": "./index.js",
+  "main": "index.js",
   "directories": {
     "doc": "doc",
     "lib": "lib"
@@ -23,6 +23,18 @@
     {
       "name": "Matt Martz",
       "email": "matt.martz@amida-tech.com"
+    },
+    {
+      "name": "Jacob Sachs",
+      "email": "jacob.s.sachs@gmail.com"
+    },
+    {
+      "name": "Avindra Goolcharan",
+      "email": "aavindraa@gmail.com"
+    },
+    {
+      "name": "Marc Sylvestre",
+      "email": "marc.sylvestre@manhydra.com"
     }
   ],
   "license": "Apache-2.0",
@@ -30,33 +42,36 @@
     "node": ">= 0.10.0"
   },
   "dependencies": {
-    "moment": "^2.16.0",
-    "underscore": "~1.8.3"
+    "moment": "^2.29.1",
+    "underscore": "~1.13.2"
   },
   "devDependencies": {
-    "blue-button-model": "1.5.0-beta.3",
-    "brfs": "~1.4.0",
-    "chai": "~2.3.0",
-    "coveralls": "~2.11.2",
-    "grunt": "~0.4.5",
-    "grunt-browserify": "~3.7.0",
-    "grunt-contrib-connect": "~0.10.1",
-    "grunt-contrib-jshint": "~0.11.2",
-    "grunt-contrib-watch": "~0.6.1",
-    "grunt-coveralls": "~1.0.0",
-    "grunt-istanbul-coverage": "~0.1.1",
-    "grunt-jsbeautifier": "~0.2.10",
-    "grunt-mocha-phantomjs": "~0.6.1",
-    "grunt-mocha-test": "~0.12.7",
-    "mocha": "~2.2.4",
-    "mocha-lcov-reporter": "0.0.2"
+    "blue-button-model": "1.10.0",
+    "brfs": "~2.0.2",
+    "chai": "~4.3.4",
+    "coveralls": "~3.1.1",
+    "grunt": "~1.4.1",
+    "grunt-browserify": "~6.0.0",
+    "grunt-contrib-connect": "~3.0.0",
+    "grunt-contrib-jshint": "~3.1.1",
+    "grunt-contrib-watch": "~1.1.0",
+    "grunt-coveralls": "~2.0.0",
+    "grunt-istanbul-coverage": "~0.1.4",
+    "grunt-jsbeautifier": "~0.2.13",
+    "grunt-mocha-phantomjs": "~4.0.0",
+    "grunt-mocha-test": "~0.13.3",
+    "mocha": "~9.1.3",
+    "mocha-lcov-reporter": "1.3.0"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/amida-tech/blue-button-cms.git"
   },
   "keywords": [
-    "bluebutton,cms,parsing"
+    "bluebutton",
+    "blue-button",
+    "cms",
+    "parsing"
   ],
   "bugs": {
     "url": "https://github.com/amida-tech/blue-button-cms/issues"

@@ -165,12 +165,12 @@ module.exports = function (grunt) {
 
     grunt.registerTask('beautify', ['jsbeautifier:beautify']);
     grunt.registerTask('mocha', ['mochaTest']);
-    grunt.registerTask('browser-test', ['browserify:require', 'browserify:tests', 'connect', 'mocha_phantomjs']);
+    // grunt.registerTask('browser-test', ['browserify:require', 'browserify:tests', 'connect', 'mocha_phantomjs']);
     grunt.registerTask('gen-change-detect', 'generates files to detect changes in generation', function () {
         generateChangeDetectionFiles(grunt);
     });
 
-    grunt.registerTask('default', ['beautify', 'jshint', 'mocha', 'browser-test', 'gen-change-detect']);
+    grunt.registerTask('default', ['beautify', 'jshint', 'mocha', /*'browser-test', */ 'gen-change-detect']);
 
     grunt.registerTask('commit', ['jshint', 'mocha']);
     grunt.registerTask('timestamp', function () {

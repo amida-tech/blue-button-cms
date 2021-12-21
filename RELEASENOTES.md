@@ -1,5 +1,8 @@
 # blue-button-cms.js Release Notes
 
+# v.1.5.3 - December 20, 2021
+- Security fixes to dev dependencies.
+
 # v.1.5.2 - Sept 19, 2017
 - Patch Moment.js vulnerability
 
