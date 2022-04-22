@@ -1,16 +1,21 @@
-# blue-button-cms.js Release Notes
+# blue-button-cms Release Notes
 
-# v.1.5.3 - December 20, 2021
+## v1.5.4 - April 22, 2022
+
+- Patch update: upgraded dev dependencies
+- Converted tests and coverages to jest
+
+## v1.5.3 - December 20, 2021
 - Security fixes to dev dependencies.
 
-# v.1.5.2 - Sept 19, 2017
+## v1.5.2 - Sept 19, 2017
 - Patch Moment.js vulnerability
 
-# v.1.5.0 - June 12, 2015
+## v1.5.0 - June 12, 2015
 - Performer consistency changes
 - Empty line crash fixes
 
-# v.1.3.0 - December 12, 2014
+## v1.3.0 - December 12, 2014
 - Seperated from blue-button repository.
 - Browser support using browserify.
 - Added to bower.

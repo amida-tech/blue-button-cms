@@ -3,7 +3,7 @@ blue-button-cms
 
 Blue Button CMS Parser
 
-[![NPM](https://nodei.co/npm/blue-button-cms.png)](https://nodei.co/npm/blue-button-cms/)
+[![NPM](https://nodei.co/npm/@amida-tech/blue-button-cms.png)](https://nodei.co/npm/@amida-tech/blue-button-cms/)
 
 [![Build Status](https://travis-ci.org/amida-tech/blue-button-cms.svg)](https://travis-ci.org/amida-tech/blue-button-cms)
 [![Coverage Status](https://coveralls.io/repos/amida-tech/blue-button-cms/badge.png)](https://coveralls.io/r/amida-tech/blue-button-cms)
@@ -14,10 +14,10 @@ This library is part of [blue-button](https://github.com/amida-tech/blue-button)
 
 ### Prerequisites
 
-- Node.js (v0.10+) and NPM
+- Node.js (v14.19+) and NPM
 - Grunt.js
 
-```
+```sh
 # Install dependencies
 npm i
 
@@ -31,7 +31,7 @@ grunt
 
 ## Usage
 
-``` javascript
+```javascript
 var bbcms = require("blue-button-cms");
 
 //read in the file

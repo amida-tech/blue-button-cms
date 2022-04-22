@@ -3,6 +3,7 @@
 ## Design Decisions Documentation
 
 **Object Transformation:**
+
 CMS text file --> Intermediate JavaScript Object --> BlueButton Object
 
 **Data direction**
