@@ -1,4 +1,4 @@
-blue-button-cms
+Blue Button CMS
 =================
 
 Blue Button CMS Parser
@@ -32,7 +32,7 @@ grunt
 ## Usage
 
 ```javascript
-var bbcms = require("blue-button-cms");
+var bbcms = require("@amida-tech/blue-button-cms");
 
 //read in the file
 var textString = fs.readFileSync("cms_sample.txt").toString();
