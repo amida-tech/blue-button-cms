@@ -43,7 +43,7 @@
   },
   "dependencies": {
     "moment": "^2.29.3",
-    "underscore": "^1.13.3"
+    "underscore": "^1.13.4"
   },
   "devDependencies": {
     "@amida-tech/blue-button-model": "^1.10.3",
